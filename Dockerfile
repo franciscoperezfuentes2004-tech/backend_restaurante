@@ -4,6 +4,9 @@ FROM php:8.4-apache
 RUN apt-get update && apt-get install -y libpq-dev zip unzip git \
     && docker-php-ext-install pdo pdo_pgsql
 
+# Instalar la extensión Opcache
+RUN docker-php-ext-install opcache
+
 # Configurar la carpeta public/ de Laravel como raíz de Apache
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
@@ -13,7 +16,11 @@ RUN a2enmod rewrite
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Configurar el tamaño máximo de subida de archivos
 COPY uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
+# Configurar Opcache
+COPY opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 # Copiar el código del proyecto
 COPY . /var/www/html
