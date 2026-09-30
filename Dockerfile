@@ -13,6 +13,8 @@ RUN a2enmod rewrite
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+COPY uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
 # Copiar el código del proyecto
 COPY . /var/www/html
 
