@@ -46,7 +46,10 @@ class CategoryController extends Controller
         $categories = Category::where('active', true)
             ->with(['dishes' => function ($query) {
                 // NO excluir los platillos sin stock o no disponibles; el frontend muestra 'NO DISPONIBLE'
-                $query->with('extras')->orderBy('id', 'asc');
+                $query->with('extras')
+                    ->withCount('reviews')
+                    ->withAvg('reviews', 'rating')
+                    ->orderBy('id', 'asc');
             }])
             ->orderBy('id', 'asc')
             ->get()
@@ -81,6 +84,8 @@ class CategoryController extends Controller
                             'is_available'        => (bool) $dish->is_available,
                             'disponible'          => (bool) $dish->is_available,
                             'is_featured'         => (bool) $dish->is_featured,
+                            'reviews_count'       => (int) ($dish->reviews_count ?? 0),
+                            'reviews_avg_rating'  => $dish->reviews_avg_rating !== null ? round((float) $dish->reviews_avg_rating, 1) : null,
                             'extras'              => $dish->extras->map(fn($e) => [
                                 'id'       => $e->id,
                                 'name'     => $e->name,

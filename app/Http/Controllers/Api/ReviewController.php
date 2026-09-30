@@ -727,6 +727,7 @@ class ReviewController extends Controller
 
         // Se guarda y queda pública instantáneamente
         $review = Review::create([
+            'dish_id'     => $request->dish_id,
             'nombre'      => $request->nombre,
             'telefono'    => $request->telefono,
             'correo'      => $request->correo,

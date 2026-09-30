@@ -35,6 +35,8 @@ class GetPosMenuController extends Controller
 
         // 2. Consulta con filtro estricto de disponibilidad y categoría activa
         $query = Dish::with(['category', 'extras'])
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
             ->where(function ($q) {
                 $q->where('is_active', true)
                   ->where('is_available', true);
@@ -109,6 +111,8 @@ class GetPosMenuController extends Controller
                 'is_available'       => (bool) $dish->is_available,
                 'is_active'          => (bool) ($dish->is_active ?? $dish->is_available),
                 'is_sold_out'        => $isSoldOut,
+                'reviews_count'      => (int) ($dish->reviews_count ?? 0),
+                'reviews_avg_rating' => $dish->reviews_avg_rating !== null ? round((float) $dish->reviews_avg_rating, 1) : null,
             ];
         });
 

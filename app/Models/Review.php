@@ -13,6 +13,7 @@ class Review extends Model
     protected $table = 'reviews';
 
     protected $fillable = [
+        'dish_id',
         'folio',
         'nombre',
         'telefono',
@@ -192,6 +193,14 @@ class Review extends Model
             $cleanPath = ltrim(str_replace(['public/', '/storage/', 'storage/'], '', $path), '/');
             return url('/storage/' . $cleanPath);
         }, $fotos));
+    }
+
+    /**
+     * Relación con el platillo asociado a la reseña.
+     */
+    public function dish()
+    {
+        return $this->belongsTo(Dish::class, 'dish_id');
     }
 
     /**

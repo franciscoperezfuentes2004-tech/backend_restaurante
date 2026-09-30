@@ -19,6 +19,14 @@ class DishController extends Controller
     {
         $dish->loadMissing('category', 'extras');
 
+        $reviewsCount = $dish->reviews_count !== null
+            ? (int) $dish->reviews_count
+            : (int) $dish->reviews()->count();
+
+        $reviewsAvgRating = $dish->reviews_avg_rating !== null
+            ? round((float) $dish->reviews_avg_rating, 1)
+            : ($reviewsCount > 0 ? round((float) $dish->reviews()->avg('rating'), 1) : null);
+
         return [
             'id'                 => $dish->id,
             'name'               => $dish->name,
@@ -39,6 +47,8 @@ class DishController extends Controller
             'allow_spice_level'   => (bool) $dish->allow_spice_level,
             'is_available'        => (bool) $dish->is_available,
             'is_featured'         => (bool) $dish->is_featured,
+            'reviews_count'       => $reviewsCount,
+            'reviews_avg_rating'  => $reviewsAvgRating,
             'limitar_dias'        => (bool) $dish->limitar_dias,
             'dias_disponibilidad' => $dish->dias_disponibilidad,
             'total_pedidos'       => (int) ($dish->order_items_sum_quantity ?? 0),
@@ -47,7 +57,10 @@ class DishController extends Controller
 
     public function index(Request $request)
     {
-        $query = Dish::with('category', 'extras')->withSum('orderItems', 'quantity');
+        $query = Dish::with('category', 'extras')
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
+            ->withSum('orderItems', 'quantity');
 
         if ($request->category_id && $request->category_id !== 'all') {
             $query->where('category_id', $request->category_id);
@@ -185,6 +198,8 @@ class DishController extends Controller
 
     public function show(Dish $dish)
     {
+        $dish->loadCount('reviews');
+        $dish->loadAvg('reviews', 'rating');
         AuditLogger::log('DISH_VIEWED', 'Platillos', "Platillo '{$dish->name}' consultado", auth()->user(), 'info');
 
         return response()->json($this->formatDish($dish));

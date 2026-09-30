@@ -85,4 +85,9 @@ class Dish extends Model
     {
         return $this->ingredientes();
     }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'dish_id');
+    }
 }

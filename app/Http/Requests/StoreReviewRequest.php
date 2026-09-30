@@ -106,6 +106,7 @@ class StoreReviewRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'dish_id'    => 'nullable|integer|exists:dishes,id',
             'nombre'     => 'required|string|max:100|regex:/^[a-zA-Z\s]+$/',
             'correo'     => 'required|email|max:255',
             'telefono'   => [
