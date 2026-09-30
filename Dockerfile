@@ -34,5 +34,7 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 # Configurar el puerto dinámico que Render asigna automáticamente
 RUN sed -i 's/80/${PORT}/g' /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
 
-# Al arrancar: Ejecutar migraciones, el seeder y encender el servidor Apache
-CMD php artisan migrate --force && php artisan db:seed --class=ProductionDataSeeder --force && apache2-foreground
+# Crear un script de inicio para Render
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+CMD ["start.sh"]
