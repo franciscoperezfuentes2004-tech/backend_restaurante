@@ -1,6 +1,8 @@
 ##### Guía de Despliegue Comercial: Sistema de Restaurantes
 ### Esta es la documentación oficial estructurada para estandarizar las futuras instalaciones comerciales de tu punto de venta. El objetivo es replicar el despliegue rápidamente para cada nuevo restaurante, separando lo que ya automatizaste en el código de lo que requiere configuración manual.   
 
+## obligatorio configurar QUEUE_CONNECTION=database en el servidor de producción.
+
 1. Configuraciones Automatizadas (Código Fuente)Estas características ya forman parte del ADN del proyecto. Al clonar tu repositorio para iniciar el proyecto de un nuevo cliente, se aplicarán en automático en la nube sin que tengas que intervenir:
 ## Seguridad y Accesos: CORS (config/cors.php) preparado para inyectar dinámicamente el dominio desde el servidor.
 ## Capacidad de Carga: Límite de subida de imágenes ampliado a 10MB (uploads.ini) inyectado al contenedor.

@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 use App\Traits\Auditable;
 
-#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_active', 'last_login_at', 'branch_id', 'branch_name', 'using_default_credentials'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_active', 'last_login_at', 'branch_id', 'branch_name', 'using_default_credentials', 'must_change_password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -61,6 +61,16 @@ class User extends Authenticatable
     public function isCocina(): bool     { return $this->role === 'cocina'; }
     public function isRepartidor(): bool { return $this->role === 'repartidor'; }
 
+    public function getTelefonoAttribute(): ?string
+    {
+        return $this->phone;
+    }
+
+    public function setTelefonoAttribute($value): void
+    {
+        $this->attributes['phone'] = $value;
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -73,6 +83,7 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'is_active' => 'boolean',
             'using_default_credentials' => 'boolean',
+            'must_change_password' => 'boolean',
             'password' => 'hashed',
         ];
     }

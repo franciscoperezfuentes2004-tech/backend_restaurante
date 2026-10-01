@@ -1,4 +1,5 @@
 <?php
+use App\Http\Middleware\EnsurePasswordIsChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
@@ -43,6 +44,7 @@ use App\Http\Controllers\Api\ContactoController;
 use App\Http\Controllers\Api\RepartidorController;
 use App\Http\Controllers\Api\KitchenController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\PasswordResetController;
 
 // Rutas públicas (sin autenticación)
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login');
@@ -50,6 +52,7 @@ Route::get('/statistics/experiences', [LandingController::class, 'getStatistics'
 Route::get('/reviews/landing',        [LandingController::class, 'getReviews']);
 Route::get('/landing/reviews',        [LandingController::class, 'getLandingReviews']);
 Route::get('/reviews/landing-reviews', [LandingController::class, 'getLandingReviews']);
+Route::post('/password/reset-temp', [PasswordResetController::class, 'generateTempPassword']);
 
 // Rutas públicas del cliente (web pública)
 Route::prefix('public')->group(function () {
@@ -141,8 +144,11 @@ Route::get('/delivery/kpis-rendimiento',           [ReportController::class, 'kp
 Route::get('/kpis/kpis-rendimiento',               [KpiController::class, 'kpisRendimiento']);
 Route::get('/kpis-rendimiento',                    [ReportController::class, 'kpisRendimiento']);
 
+// Ruta EXCLUSIVA para cambiar la contraseña temporal (Requiere login, pero NO el guardia bloqueador)
+Route::middleware('auth:sanctum')->post('/password/force-change', [PasswordResetController::class, 'forceChange']);
+
 // Rutas protegidas (solo admin autenticado)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', EnsurePasswordIsChanged::class])->group(function () {
 
     Route::post('/logout',               [AuthController::class, 'logout']);
     Route::get('/me',                    [AuthController::class, 'me']);
