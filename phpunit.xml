@@ -32,6 +32,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="N8N_URL" value="http://localhost:5678"/>
         <env name="N8N_WEBHOOK_URL" value="http://localhost/webhook/orders"/>
         <env name="N8N_WEBHOOK_PASSWORD" value="http://localhost/webhook/password"/>
         <env name="N8N_WEBHOOK_RESERVATION" value="http://localhost/webhook/reservations"/>

@@ -35,9 +35,9 @@ class PasswordResetController extends Controller
             // Leemos la URL base de n8n desde el archivo .env
             // Si no existe, usamos localhost por defecto
             $n8nBaseUrl = rtrim(env('N8N_URL', 'http://localhost:5678'), '/');
-            $webhookUrl = env('N8N_WEBHOOK_PASSWORD') ?: ($n8nBaseUrl . '/webhook/recuperar-password');
 
-            $response = Http::post($webhookUrl, [
+            // Concatenamos la URL base con el path del webhook
+            $response = Http::post($n8nBaseUrl . '/webhook/recuperar-password', [
                 'email'             => $request->email,
                 'telefono'          => $user?->phone ?? $user?->telefono ?? $request->telefono ?? 'N/A', // O el campo real que tengas en tu BD
                 'codigo'            => $codigoTemporal,

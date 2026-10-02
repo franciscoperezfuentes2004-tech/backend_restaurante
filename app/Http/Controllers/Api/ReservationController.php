@@ -441,9 +441,9 @@ class ReservationController extends Controller
             // Leemos la URL base de n8n desde el archivo .env
             // Si no existe, usamos localhost por defecto
             $n8nBaseUrl = rtrim(env('N8N_URL', 'http://localhost:5678'), '/');
-            $webhookUrl = env('N8N_WEBHOOK_RESERVATION') ?: ($n8nBaseUrl . '/webhook/nueva-reservacion');
 
-            Http::post($webhookUrl, [
+            // Concatenamos la URL base con el path del webhook
+            Http::post($n8nBaseUrl . '/webhook/nueva-reservacion', [
                 'cliente_email'     => $reservacion->cliente_email ?? $reservacion->email ?? $reservacion->customer_email,
                 'cliente_nombre'    => $reservacion->cliente_nombre ?? $reservacion->nombre ?? $reservacion->customer_name,
                 'folio'             => $reservacion->folio ?: ('RES-' . str_pad($reservacion->id, 4, '0', STR_PAD_LEFT)),
