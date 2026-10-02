@@ -244,4 +244,101 @@ class Reservation extends Model
             return $prefijo . str_pad($siguienteNumero, 4, '0', STR_PAD_LEFT);
         });
     }
+
+    public function getClienteEmailAttribute(): ?string
+    {
+        return $this->email ?: $this->customer_email;
+    }
+
+    public function setClienteEmailAttribute(?string $value): void
+    {
+        $this->email = $value;
+        $this->customer_email = $value;
+    }
+
+    public function getClienteNombreAttribute(): ?string
+    {
+        return $this->nombre ?: $this->customer_name;
+    }
+
+    public function setClienteNombreAttribute(?string $value): void
+    {
+        $this->nombre = $value;
+        $this->customer_name = $value;
+    }
+
+    public function getFechaReservaAttribute(): ?string
+    {
+        return $this->fecha ?: $this->reservation_date;
+    }
+
+    public function setFechaReservaAttribute(?string $value): void
+    {
+        $this->fecha = $value;
+        $this->reservation_date = $value;
+    }
+
+    public function getHoraReservaAttribute(): ?string
+    {
+        return $this->hora ?: $this->reservation_time;
+    }
+
+    public function setHoraReservaAttribute(?string $value): void
+    {
+        $this->hora = $value;
+        $this->reservation_time = $value;
+    }
+
+    public function getCantidadPersonasAttribute(): int
+    {
+        return (int) ($this->personas ?: ($this->guests_count ?: 1));
+    }
+
+    public function setCantidadPersonasAttribute($value): void
+    {
+        $this->personas = (int) $value;
+        $this->guests_count = (int) $value;
+    }
+
+    public function getNumeroMesaAttribute(): ?string
+    {
+        if (!empty($this->table_number)) {
+            return $this->table_number;
+        }
+
+        if (!empty($this->table_id) && class_exists(Mesa::class)) {
+            $mesa = Mesa::find($this->table_id);
+            if ($mesa) {
+                return 'Mesa ' . $mesa->numero_mesa;
+            }
+        }
+
+        return null;
+    }
+
+    public function setNumeroMesaAttribute($value): void
+    {
+        $this->table_number = is_numeric($value) ? ('Mesa ' . $value) : $value;
+    }
+
+    public function getEstatusAttribute(): ?string
+    {
+        return $this->estado ?: $this->status;
+    }
+
+    public function setEstatusAttribute(?string $value): void
+    {
+        $this->estado = $value ? strtolower($value) : $value;
+        if ($value !== null) {
+            $valLower = strtolower($value);
+            $this->status = match ($valLower) {
+                'confirmada', 'confirmado' => 'confirmed',
+                'pendiente'                => 'pending',
+                'cancelada', 'cancelado'   => 'cancelled',
+                'completada', 'completado' => 'completed',
+                'rechazada', 'rechazado'   => 'rejected',
+                default                    => $valLower,
+            };
+        }
+    }
 }

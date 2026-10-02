@@ -8,8 +8,11 @@ use App\Http\Requests\UpdateReservationRequest;
 use App\Models\Reservation;
 use App\Models\Mesa;
 use App\Services\NotificationService;
+use App\Models\RestaurantSetting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ReservationController extends Controller
 {
@@ -313,6 +316,10 @@ class ReservationController extends Controller
 
         $reservation->update($updateData);
 
+        if ($reservation->status === 'confirmed') {
+            $this->dispararWebhookConfirmacion($reservation);
+        }
+
         NotificationService::create(
             'reservacion_actualizada',
             'Reservación Actualizada',
@@ -335,6 +342,10 @@ class ReservationController extends Controller
         ]);
 
         $reservation->update(['status' => $data['status']]);
+
+        if ($reservation->status === 'confirmed') {
+            $this->dispararWebhookConfirmacion($reservation);
+        }
 
         $statusLabel = [
             'confirmed' => 'Confirmada',
@@ -371,5 +382,83 @@ class ReservationController extends Controller
         );
 
         return response()->json(['message' => 'Reservación eliminada correctamente']);
+    }
+
+    public function asignarMesa(Request $request, $id) 
+    {
+        // 1. Encuentras la reservación en PostgreSQL y la actualizas
+        $reservacion = Reservation::findOrFail($id);
+        $reservacion->estatus = 'Confirmada';
+        $reservacion->status  = 'confirmed';
+
+        if ($request->filled('numero_mesa') || $request->filled('mesa')) {
+            $reservacion->numero_mesa = $request->numero_mesa ?? $request->mesa;
+        }
+
+        if ($request->filled('table_id')) {
+            $reservacion->table_id = $request->table_id;
+            $mesaObj = Mesa::find($request->table_id);
+            if ($mesaObj) {
+                $reservacion->table_number = 'Mesa ' . $mesaObj->numero_mesa;
+            }
+        }
+
+        $reservacion->save();
+
+        // 2. ¡AQUÍ ENTRA LA MAGIA DE n8n! 
+        // Disparamos el webhook enviando los datos reales de la base de datos
+        // (Asegúrate de usar tu Production URL de n8n aquí)
+        $this->dispararWebhookConfirmacion($reservacion);
+
+        // 3. Devuelves al gerente a la pantalla con un mensaje de éxito
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json([
+                'status'      => 'success',
+                'message'     => 'Mesa asignada y correo de confirmación enviado al cliente.',
+                'reservation' => $this->formatReservation($reservacion),
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Mesa asignada y correo de confirmación enviado al cliente.');
+    }
+
+    public function dispararWebhookConfirmacion(Reservation $reservacion): void
+    {
+        try {
+            $sucursal = RestaurantSetting::first()?->restaurant_name ?? 'Sucursal Centro';
+
+            $fechaFormateada = $reservacion->fecha
+                ? Carbon::parse($reservacion->fecha)->locale('es')->isoFormat('D [de] MMMM [de] YYYY')
+                : ($reservacion->reservation_date ? Carbon::parse($reservacion->reservation_date)->locale('es')->isoFormat('D [de] MMMM [de] YYYY') : date('d/m/Y'));
+
+            $horaFormateada = $reservacion->hora
+                ? Carbon::parse($reservacion->hora)->format('h:i A')
+                : ($reservacion->reservation_time ? Carbon::parse($reservacion->reservation_time)->format('h:i A') : '08:00 PM');
+
+            $mesa = $reservacion->numero_mesa 
+                ?: ($reservacion->table_number ?: 'Mesa asignada');
+
+            // Leemos la URL base de n8n desde el archivo .env
+            // Si no existe, usamos localhost por defecto
+            $n8nBaseUrl = rtrim(env('N8N_URL', 'http://localhost:5678'), '/');
+            $webhookUrl = env('N8N_WEBHOOK_RESERVATION') ?: ($n8nBaseUrl . '/webhook/nueva-reservacion');
+
+            Http::post($webhookUrl, [
+                'cliente_email'     => $reservacion->cliente_email ?? $reservacion->email ?? $reservacion->customer_email,
+                'cliente_nombre'    => $reservacion->cliente_nombre ?? $reservacion->nombre ?? $reservacion->customer_name,
+                'folio'             => $reservacion->folio ?: ('RES-' . str_pad($reservacion->id, 4, '0', STR_PAD_LEFT)),
+                'fecha'             => $fechaFormateada,
+                'fecha_reserva'     => $reservacion->fecha_reserva,
+                'hora'              => $horaFormateada,
+                'hora_reserva'      => $reservacion->hora_reserva,
+                'personas'          => (int) $reservacion->cantidad_personas,
+                'cantidad_personas' => (int) $reservacion->cantidad_personas,
+                'sucursal'          => $sucursal,
+                'mesa'              => $mesa ?? 'Mesa asignada',
+                'numero_mesa'       => $mesa ?? 'Mesa asignada',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error al disparar webhook de reservación n8n: ' . $e->getMessage());
+        }
     }
 }

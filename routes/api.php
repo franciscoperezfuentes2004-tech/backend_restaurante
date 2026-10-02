@@ -53,6 +53,8 @@ Route::get('/reviews/landing',        [LandingController::class, 'getReviews']);
 Route::get('/landing/reviews',        [LandingController::class, 'getLandingReviews']);
 Route::get('/reviews/landing-reviews', [LandingController::class, 'getLandingReviews']);
 Route::post('/password/reset-temp', [PasswordResetController::class, 'generateTempPassword']);
+Route::post('/password/recuperar',  [PasswordResetController::class, 'enviarRecuperacion']);
+Route::post('/recuperar-password',  [PasswordResetController::class, 'enviarRecuperacion']);
 
 // Rutas públicas del cliente (web pública)
 Route::prefix('public')->group(function () {
@@ -220,6 +222,8 @@ Route::middleware(['auth:sanctum', EnsurePasswordIsChanged::class])->group(funct
         Route::post('/admin/reservations',                       [ReservationController::class, 'store']);
         Route::put('/admin/reservations/{reservation}',          [ReservationController::class, 'update']);
         Route::patch('/admin/reservations/{reservation}/status', [ReservationController::class, 'updateStatus']);
+        Route::match(['post', 'put', 'patch'], '/admin/reservations/{reservation}/asignar-mesa', [ReservationController::class, 'asignarMesa']);
+        Route::match(['post', 'put', 'patch'], '/admin/reservations/{reservation}/mesa',         [ReservationController::class, 'asignarMesa']);
         Route::patch('/admin/reservations/{reservation}',        [ReservationController::class, 'update']);
         Route::delete('/admin/reservations/{reservation}',       [ReservationController::class, 'destroy']);
 
