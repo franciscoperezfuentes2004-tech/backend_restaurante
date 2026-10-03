@@ -378,6 +378,16 @@ class SettingsController extends Controller
         // 13. Estadísticas Seguras de Experiencias y Reseñas (Zero-Trust Moderation)
         $data['stats_experiencias'] = \App\Models\Review::getExperienceStats();
 
+        // 14. Integraciones de Notificaciones (Discord / Telegram)
+        $data['active_notification_platform'] = $settings->active_notification_platform ?: 'none';
+        $data['activeNotificationPlatform']  = $data['active_notification_platform'];
+        $data['discord_webhook_url']          = $settings->discord_webhook_url ?: '';
+        $data['discordWebhookUrl']           = $data['discord_webhook_url'];
+        $data['telegram_bot_token']           = $settings->telegram_bot_token ?: '';
+        $data['telegramBotToken']            = $data['telegram_bot_token'];
+        $data['telegram_chat_id']             = $settings->telegram_chat_id ?: '';
+        $data['telegramChatId']              = $data['telegram_chat_id'];
+
         return response()->json($data);
     }
 
@@ -511,6 +521,16 @@ class SettingsController extends Controller
             'bancoClabe'             => 'nullable|string|max:25',
             'banco_titular'          => 'nullable|string|max:150',
             'bancoTitular'           => 'nullable|string|max:150',
+
+            // Integraciones de Notificaciones (Discord / Telegram)
+            'active_notification_platform' => 'nullable|string|in:none,discord,telegram',
+            'activeNotificationPlatform'  => 'nullable|string|in:none,discord,telegram',
+            'discord_webhook_url'          => 'nullable|string|max:500',
+            'discordWebhookUrl'           => 'nullable|string|max:500',
+            'telegram_bot_token'           => 'nullable|string|max:255',
+            'telegramBotToken'            => 'nullable|string|max:255',
+            'telegram_chat_id'             => 'nullable|string|max:255',
+            'telegramChatId'              => 'nullable|string|max:255',
 
             // Delivery & Operaciones
             'delivery_fee'           => 'nullable|numeric|min:0',
@@ -757,6 +777,31 @@ class SettingsController extends Controller
 
         if (array_key_exists('banco_titular', $data))       $updateData['banco_titular'] = $data['banco_titular'];
         elseif (array_key_exists('bancoTitular', $data))    $updateData['banco_titular'] = $data['bancoTitular'];
+
+        // Integraciones de Notificaciones (Discord / Telegram)
+        if (array_key_exists('active_notification_platform', $data)) {
+            $updateData['active_notification_platform'] = $data['active_notification_platform'] ?: 'none';
+        } elseif (array_key_exists('activeNotificationPlatform', $data)) {
+            $updateData['active_notification_platform'] = $data['activeNotificationPlatform'] ?: 'none';
+        }
+
+        if (array_key_exists('discord_webhook_url', $data)) {
+            $updateData['discord_webhook_url'] = $data['discord_webhook_url'];
+        } elseif (array_key_exists('discordWebhookUrl', $data)) {
+            $updateData['discord_webhook_url'] = $data['discordWebhookUrl'];
+        }
+
+        if (array_key_exists('telegram_bot_token', $data)) {
+            $updateData['telegram_bot_token'] = $data['telegram_bot_token'];
+        } elseif (array_key_exists('telegramBotToken', $data)) {
+            $updateData['telegram_bot_token'] = $data['telegramBotToken'];
+        }
+
+        if (array_key_exists('telegram_chat_id', $data)) {
+            $updateData['telegram_chat_id'] = $data['telegram_chat_id'];
+        } elseif (array_key_exists('telegramChatId', $data)) {
+            $updateData['telegram_chat_id'] = $data['telegramChatId'];
+        }
 
         // 7. Operaciones & Delivery
         if (array_key_exists('delivery_fee', $data))        $updateData['delivery_fee'] = $data['delivery_fee'];

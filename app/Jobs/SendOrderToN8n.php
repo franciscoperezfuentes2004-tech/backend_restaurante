@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Order;
+use App\Models\RestaurantSetting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -35,6 +36,12 @@ class SendOrderToN8n implements ShouldQueue
         $webhookUrl = config('services.n8n.webhook_url') ?: env('N8N_WEBHOOK_URL', 'http://tu-servidor-n8n:5678/webhook/nueva-orden');
 
         try {
+            $settings = RestaurantSetting::first();
+            $activePlatform = $settings?->active_notification_platform ?? 'none';
+            $discordWebhook = $settings?->discord_webhook_url;
+            $telegramBotToken = $settings?->telegram_bot_token;
+            $telegramChatId = $settings?->telegram_chat_id;
+
             $payload = [
                 'order_id'       => $this->order->id,
                 'folio'          => $this->order->folio,
@@ -46,6 +53,16 @@ class SendOrderToN8n implements ShouldQueue
                 'modalidad'      => $this->order->modality,
                 'mesa'           => $this->order->table_number,
                 'notas'          => $this->order->notes,
+                'active_notification_platform' => $activePlatform,
+                'discord_webhook_url'          => $discordWebhook,
+                'telegram_bot_token'           => $telegramBotToken,
+                'telegram_chat_id'             => $telegramChatId,
+                'notification_settings'        => [
+                    'platform'            => $activePlatform,
+                    'discord_webhook_url' => $discordWebhook,
+                    'telegram_bot_token'  => $telegramBotToken,
+                    'telegram_chat_id'    => $telegramChatId,
+                ],
                 'items'          => $this->order->relationLoaded('items')
                     ? $this->order->items->map(function ($item) {
                         return [

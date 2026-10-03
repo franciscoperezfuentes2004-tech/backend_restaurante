@@ -425,7 +425,12 @@ class ReservationController extends Controller
     public function dispararWebhookConfirmacion(Reservation $reservacion): void
     {
         try {
-            $sucursal = RestaurantSetting::first()?->restaurant_name ?? 'Sucursal Centro';
+            $setting = RestaurantSetting::first();
+            $sucursal = $setting?->restaurant_name ?? 'Sucursal Centro';
+            $activePlatform = $setting?->active_notification_platform ?? 'none';
+            $discordWebhook = $setting?->discord_webhook_url;
+            $telegramBotToken = $setting?->telegram_bot_token;
+            $telegramChatId = $setting?->telegram_chat_id;
 
             $fechaFormateada = $reservacion->fecha
                 ? Carbon::parse($reservacion->fecha)->locale('es')->isoFormat('D [de] MMMM [de] YYYY')
@@ -456,6 +461,16 @@ class ReservationController extends Controller
                 'sucursal'          => $sucursal,
                 'mesa'              => $mesa ?? 'Mesa asignada',
                 'numero_mesa'       => $mesa ?? 'Mesa asignada',
+                'active_notification_platform' => $activePlatform,
+                'discord_webhook_url'          => $discordWebhook,
+                'telegram_bot_token'           => $telegramBotToken,
+                'telegram_chat_id'             => $telegramChatId,
+                'notification_settings'        => [
+                    'platform'            => $activePlatform,
+                    'discord_webhook_url' => $discordWebhook,
+                    'telegram_bot_token'  => $telegramBotToken,
+                    'telegram_chat_id'    => $telegramChatId,
+                ],
             ]);
         } catch (\Throwable $e) {
             Log::error('Error al disparar webhook de reservación n8n: ' . $e->getMessage());

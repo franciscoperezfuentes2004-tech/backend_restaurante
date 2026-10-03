@@ -59,6 +59,10 @@ class RestaurantSetting extends Model
         'banco_nombre',
         'banco_clabe',
         'banco_titular',
+        'active_notification_platform',
+        'discord_webhook_url',
+        'telegram_bot_token',
+        'telegram_chat_id',
     ];
 
     protected $casts = [
