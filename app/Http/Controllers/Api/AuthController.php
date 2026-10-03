@@ -195,7 +195,7 @@ class AuthController extends Controller
         $emailEnmascarado = NotificationService::maskEmail($user->email);
         NotificationService::create('login_success', 'Inicio de Sesión', "Inicio de sesión: {$emailEnmascarado}", ['user_id' => $user->id, 'ip' => $ip], $user->id);
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'token'        => $token,
