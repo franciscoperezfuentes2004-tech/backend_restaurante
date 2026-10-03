@@ -470,11 +470,3 @@ Route::middleware(['auth:sanctum', EnsurePasswordIsChanged::class])->group(funct
         Route::patch('/drivers/{id}',                [DriverController::class, 'update']);
     });
 });
-
-Route::get('/reset-database', function () {
-    \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
-        '--seed' => true, 
-        '--force' => true
-    ]);
-    return 'Base de datos reseteada y poblada con los nuevos correos correctamente.';
-});
