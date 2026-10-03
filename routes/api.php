@@ -470,8 +470,3 @@ Route::middleware(['auth:sanctum', EnsurePasswordIsChanged::class])->group(funct
         Route::patch('/drivers/{id}',                [DriverController::class, 'update']);
     });
 });
-
-Route::get('/clear-cache', function () {
-    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
-    return 'Caché de Laravel limpiada con éxito. Las políticas de CORS han sido actualizadas.';
-});
