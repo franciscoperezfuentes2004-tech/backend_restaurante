@@ -34,7 +34,7 @@ class OrderSeeder extends Seeder
         $items1 = [
             ['name' => 'Carpaccio de Wagyu Premium', 'qty' => 1, 'notes' => null],
             ['name' => 'Ribeye Black Angus a la Leña', 'qty' => 1, 'notes' => 'Término medio.'],
-            ['name' => 'Gin Tonic Aurum Signature', 'qty' => 2, 'notes' => null],
+            ['name' => 'Gin Tonic Restaurante Signature', 'qty' => 2, 'notes' => null],
         ];
 
         $total1 = 0;

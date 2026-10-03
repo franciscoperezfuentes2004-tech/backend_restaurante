@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Admin
-        User::firstOrCreate(['email' => 'admin@aurum.com'], [
+        User::firstOrCreate(['email' => 'admin@restaurante.com'], [
             'name' => 'Administrador',
             'password' => Hash::make('password'),
         ]);
@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
 
         // Configuración del restaurante
         RestaurantSetting::firstOrCreate(['id' => 1], [
-            'restaurant_name' => 'Aurum',
+            'restaurant_name' => 'Restaurante',
             'description' => 'Experiencia gastronómica de autor',
             'phone' => '744-000-0000',
             'address' => 'Av. Principal 123, Ciudad',

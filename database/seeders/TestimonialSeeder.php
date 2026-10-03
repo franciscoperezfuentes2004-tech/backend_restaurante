@@ -24,7 +24,7 @@ class TestimonialSeeder extends Seeder
             ],
             [
                 'customer_name' => 'Alejandro Ruiz',
-                'comment' => 'El ambiente es precioso, muy íntimo y elegante. Recomiendo ampliamente el cóctel Gin Tonic Aurum Signature.',
+                'comment' => 'El ambiente es precioso, muy íntimo y elegante. Recomiendo ampliamente el cóctel Gin Tonic Restaurante Signature.',
                 'rating' => 4,
                 'is_approved' => true,
             ],

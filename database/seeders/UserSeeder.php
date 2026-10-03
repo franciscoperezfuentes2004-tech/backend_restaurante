@@ -16,17 +16,17 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $usuarios = [
-            ['name' => 'Super Administrador', 'email' => 'super@aurum.com', 'role' => 'super_admin'],
-            ['name' => 'Administrador','email' => 'admin@aurum.com',      'role' => 'admin'],
-            ['name' => 'Gerente',      'email' => 'gerente@aurum.com',    'role' => 'gerente'],
-            ['name' => 'Mesero',       'email' => 'mesero@aurum.com',     'role' => 'mesero'],
-            ['name' => 'Cocina',       'email' => 'cocina@aurum.com',     'role' => 'cocina'],
-            ['name' => 'Repartidor',   'email' => 'repartidor@aurum.com', 'role' => 'repartidor'],
-            ['name' => 'Cajero',       'email' => 'cajero@aurum.com',     'role' => 'cajero'],
+            ['name' => 'Super Administrador', 'email' => 'super@restaurante.com', 'role' => 'super_admin'],
+            ['name' => 'Administrador','email' => 'admin@restaurante.com',      'role' => 'admin'],
+            ['name' => 'Gerente',      'email' => 'gerente@restaurante.com',    'role' => 'gerente'],
+            ['name' => 'Mesero',       'email' => 'mesero@restaurante.com',     'role' => 'mesero'],
+            ['name' => 'Cocina',       'email' => 'cocina@restaurante.com',     'role' => 'cocina'],
+            ['name' => 'Repartidor',   'email' => 'repartidor@restaurante.com', 'role' => 'repartidor'],
+            ['name' => 'Cajero',       'email' => 'cajero@restaurante.com',     'role' => 'cajero'],
         ];
 
         foreach ($usuarios as $usuario) {
-            $isDefaultSuper = ($usuario['email'] === 'super@aurum.com');
+            $isDefaultSuper = ($usuario['email'] === 'super@restaurante.com');
             $password = $isDefaultSuper ? 'SuperAdmin123' : 'password123';
 
             User::updateOrCreate(

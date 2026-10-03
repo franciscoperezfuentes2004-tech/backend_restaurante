@@ -54,7 +54,7 @@ class ProductionDataSeeder extends Seeder
             }
         }
 
-        // Adaptación a tablas de configuración existentes en el sistema (aurum_db)
+        // Adaptación a tablas de configuración existentes en el sistema
         if (Schema::hasTable('restaurant_settings')) {
             RestaurantSetting::updateOrCreate(
                 ['id' => 1],

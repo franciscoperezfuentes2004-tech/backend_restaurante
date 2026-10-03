@@ -32,7 +32,7 @@ class CategorySeeder extends Seeder
                 'active' => true,
             ],
             [
-                'name' => 'Bebidas & Coctelería Aurum',
+                'name' => 'Bebidas & Coctelería Restaurante',
                 'description' => 'Bebidas refrescantes y cócteles insignia creados por nuestros mixólogos profesionales.',
                 'active' => true,
             ],

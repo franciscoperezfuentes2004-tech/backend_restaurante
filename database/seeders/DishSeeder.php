@@ -94,10 +94,10 @@ class DishSeeder extends Seeder
                 'is_featured' => true,
             ],
 
-            // Bebidas & Coctelería Aurum
+            // Bebidas & Coctelería Restaurante
             [
-                'category_name' => 'Bebidas & Coctelería Aurum',
-                'name' => 'Gin Tonic Aurum Signature',
+                'category_name' => 'Bebidas & Coctelería Restaurante',
+                'name' => 'Gin Tonic Restaurante Signature',
                 'description' => 'Ginebra premium infusionada con botánicos selectos, frutos del bosque, tónica artesanal y copos de oro comestible de 24k.',
                 'price' => 18.00,
                 'image_url' => 'https://images.unsplash.com/photo-1524361120530-94332302488a?auto=format&fit=crop&w=600&q=80',
@@ -105,7 +105,7 @@ class DishSeeder extends Seeder
                 'is_featured' => true,
             ],
             [
-                'category_name' => 'Bebidas & Coctelería Aurum',
+                'category_name' => 'Bebidas & Coctelería Restaurante',
                 'name' => 'Mojito Cítrico de Hierbabuena',
                 'description' => 'Ron añejo blanco, zumo de lima recién exprimido, hojas de menta orgánica maceradas y un toque de azúcar de caña.',
                 'price' => 12.50,
