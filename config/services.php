@@ -41,8 +41,4 @@ return [
         'required' => env('CLOUDFLARE_TURNSTILE_REQUIRED', true),
     ],
 
-    'n8n' => [
-        'webhook_url' => env('N8N_WEBHOOK_URL', 'http://tu-servidor-n8n:5678/webhook/nueva-orden'),
-    ],
-
 ];

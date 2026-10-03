@@ -381,12 +381,27 @@ class SettingsController extends Controller
         // 14. Integraciones de Notificaciones (Discord / Telegram)
         $data['active_notification_platform'] = $settings->active_notification_platform ?: 'none';
         $data['activeNotificationPlatform']  = $data['active_notification_platform'];
-        $data['discord_webhook_url']          = $settings->discord_webhook_url ?: '';
-        $data['discordWebhookUrl']           = $data['discord_webhook_url'];
-        $data['telegram_bot_token']           = $settings->telegram_bot_token ?: '';
-        $data['telegramBotToken']            = $data['telegram_bot_token'];
-        $data['telegram_chat_id']             = $settings->telegram_chat_id ?: '';
-        $data['telegramChatId']              = $data['telegram_chat_id'];
+
+        $discordSettings = is_array($settings->discord_settings)
+            ? $settings->discord_settings
+            : (json_decode($settings->discord_settings ?? '[]', true) ?: []);
+
+        $telegramSettings = is_array($settings->telegram_settings)
+            ? $settings->telegram_settings
+            : (json_decode($settings->telegram_settings ?? '[]', true) ?: []);
+
+        $data['discord_settings'] = [
+            'orders_webhook_url'       => $discordSettings['orders_webhook_url'] ?? '',
+            'reservations_webhook_url' => $discordSettings['reservations_webhook_url'] ?? '',
+        ];
+        $data['discordSettings'] = $data['discord_settings'];
+
+        $data['telegram_settings'] = [
+            'bot_token'            => $telegramSettings['bot_token'] ?? '',
+            'orders_chat_id'       => $telegramSettings['orders_chat_id'] ?? '',
+            'reservations_chat_id' => $telegramSettings['reservations_chat_id'] ?? '',
+        ];
+        $data['telegramSettings'] = $data['telegram_settings'];
 
         return response()->json($data);
     }
@@ -523,14 +538,17 @@ class SettingsController extends Controller
             'bancoTitular'           => 'nullable|string|max:150',
 
             // Integraciones de Notificaciones (Discord / Telegram)
-            'active_notification_platform' => 'nullable|string|in:none,discord,telegram',
-            'activeNotificationPlatform'  => 'nullable|string|in:none,discord,telegram',
-            'discord_webhook_url'          => 'nullable|string|max:500',
-            'discordWebhookUrl'           => 'nullable|string|max:500',
-            'telegram_bot_token'           => 'nullable|string|max:255',
-            'telegramBotToken'            => 'nullable|string|max:255',
-            'telegram_chat_id'             => 'nullable|string|max:255',
-            'telegramChatId'              => 'nullable|string|max:255',
+            'active_notification_platform'              => 'nullable|string|in:none,discord,telegram',
+            'activeNotificationPlatform'               => 'nullable|string|in:none,discord,telegram',
+            'discord_settings'                          => 'nullable|array',
+            'discordSettings'                           => 'nullable|array',
+            'discord_settings.orders_webhook_url'       => 'nullable|string|max:500',
+            'discord_settings.reservations_webhook_url' => 'nullable|string|max:500',
+            'telegram_settings'                         => 'nullable|array',
+            'telegramSettings'                          => 'nullable|array',
+            'telegram_settings.bot_token'               => 'nullable|string|max:255',
+            'telegram_settings.orders_chat_id'          => 'nullable|string|max:255',
+            'telegram_settings.reservations_chat_id'    => 'nullable|string|max:255',
 
             // Delivery & Operaciones
             'delivery_fee'           => 'nullable|numeric|min:0',
@@ -785,22 +803,27 @@ class SettingsController extends Controller
             $updateData['active_notification_platform'] = $data['activeNotificationPlatform'] ?: 'none';
         }
 
-        if (array_key_exists('discord_webhook_url', $data)) {
-            $updateData['discord_webhook_url'] = $data['discord_webhook_url'];
-        } elseif (array_key_exists('discordWebhookUrl', $data)) {
-            $updateData['discord_webhook_url'] = $data['discordWebhookUrl'];
+        if (array_key_exists('discord_settings', $data) || array_key_exists('discordSettings', $data)) {
+            $ds = $data['discord_settings'] ?? $data['discordSettings'] ?? [];
+            if (is_string($ds)) {
+                $ds = json_decode($ds, true) ?: [];
+            }
+            $updateData['discord_settings'] = [
+                'orders_webhook_url'       => $ds['orders_webhook_url'] ?? $ds['ordersWebhookUrl'] ?? null,
+                'reservations_webhook_url' => $ds['reservations_webhook_url'] ?? $ds['reservationsWebhookUrl'] ?? null,
+            ];
         }
 
-        if (array_key_exists('telegram_bot_token', $data)) {
-            $updateData['telegram_bot_token'] = $data['telegram_bot_token'];
-        } elseif (array_key_exists('telegramBotToken', $data)) {
-            $updateData['telegram_bot_token'] = $data['telegramBotToken'];
-        }
-
-        if (array_key_exists('telegram_chat_id', $data)) {
-            $updateData['telegram_chat_id'] = $data['telegram_chat_id'];
-        } elseif (array_key_exists('telegramChatId', $data)) {
-            $updateData['telegram_chat_id'] = $data['telegramChatId'];
+        if (array_key_exists('telegram_settings', $data) || array_key_exists('telegramSettings', $data)) {
+            $ts = $data['telegram_settings'] ?? $data['telegramSettings'] ?? [];
+            if (is_string($ts)) {
+                $ts = json_decode($ts, true) ?: [];
+            }
+            $updateData['telegram_settings'] = [
+                'bot_token'            => $ts['bot_token'] ?? $ts['botToken'] ?? null,
+                'orders_chat_id'       => $ts['orders_chat_id'] ?? $ts['ordersChatId'] ?? null,
+                'reservations_chat_id' => $ts['reservations_chat_id'] ?? $ts['reservationsChatId'] ?? null,
+            ];
         }
 
         // 7. Operaciones & Delivery

@@ -405,9 +405,7 @@ class ReservationController extends Controller
 
         $reservacion->save();
 
-        // 2. ¡AQUÍ ENTRA LA MAGIA DE n8n! 
-        // Disparamos el webhook enviando los datos reales de la base de datos
-        // (Asegúrate de usar tu Production URL de n8n aquí)
+        // 2. Disparamos la notificación multi-canal en tiempo real (Discord / Telegram)
         $this->dispararWebhookConfirmacion($reservacion);
 
         // 3. Devuelves al gerente a la pantalla con un mensaje de éxito
@@ -425,55 +423,9 @@ class ReservationController extends Controller
     public function dispararWebhookConfirmacion(Reservation $reservacion): void
     {
         try {
-            $setting = RestaurantSetting::first();
-            $sucursal = $setting?->restaurant_name ?? 'Sucursal Centro';
-            $activePlatform = $setting?->active_notification_platform ?? 'none';
-            $discordWebhook = $setting?->discord_webhook_url;
-            $telegramBotToken = $setting?->telegram_bot_token;
-            $telegramChatId = $setting?->telegram_chat_id;
-
-            $fechaFormateada = $reservacion->fecha
-                ? Carbon::parse($reservacion->fecha)->locale('es')->isoFormat('D [de] MMMM [de] YYYY')
-                : ($reservacion->reservation_date ? Carbon::parse($reservacion->reservation_date)->locale('es')->isoFormat('D [de] MMMM [de] YYYY') : date('d/m/Y'));
-
-            $horaFormateada = $reservacion->hora
-                ? Carbon::parse($reservacion->hora)->format('h:i A')
-                : ($reservacion->reservation_time ? Carbon::parse($reservacion->reservation_time)->format('h:i A') : '08:00 PM');
-
-            $mesa = $reservacion->numero_mesa 
-                ?: ($reservacion->table_number ?: 'Mesa asignada');
-
-            // Leemos la URL base de n8n desde el archivo .env
-            // Si no existe, usamos localhost por defecto
-            $n8nBaseUrl = rtrim(env('N8N_URL', 'http://localhost:5678'), '/');
-
-            // Concatenamos la URL base con el path del webhook
-            Http::post($n8nBaseUrl . '/webhook/nueva-reservacion', [
-                'cliente_email'     => $reservacion->cliente_email ?? $reservacion->email ?? $reservacion->customer_email,
-                'cliente_nombre'    => $reservacion->cliente_nombre ?? $reservacion->nombre ?? $reservacion->customer_name,
-                'folio'             => $reservacion->folio ?: ('RES-' . str_pad($reservacion->id, 4, '0', STR_PAD_LEFT)),
-                'fecha'             => $fechaFormateada,
-                'fecha_reserva'     => $reservacion->fecha_reserva,
-                'hora'              => $horaFormateada,
-                'hora_reserva'      => $reservacion->hora_reserva,
-                'personas'          => (int) $reservacion->cantidad_personas,
-                'cantidad_personas' => (int) $reservacion->cantidad_personas,
-                'sucursal'          => $sucursal,
-                'mesa'              => $mesa ?? 'Mesa asignada',
-                'numero_mesa'       => $mesa ?? 'Mesa asignada',
-                'active_notification_platform' => $activePlatform,
-                'discord_webhook_url'          => $discordWebhook,
-                'telegram_bot_token'           => $telegramBotToken,
-                'telegram_chat_id'             => $telegramChatId,
-                'notification_settings'        => [
-                    'platform'            => $activePlatform,
-                    'discord_webhook_url' => $discordWebhook,
-                    'telegram_bot_token'  => $telegramBotToken,
-                    'telegram_chat_id'    => $telegramChatId,
-                ],
-            ]);
+            app(\App\Services\NotificationService::class)->sendReservationNotification($reservacion);
         } catch (\Throwable $e) {
-            Log::error('Error al disparar webhook de reservación n8n: ' . $e->getMessage());
+            Log::error('Error al disparar notificación de reservación: ' . $e->getMessage());
         }
     }
 }

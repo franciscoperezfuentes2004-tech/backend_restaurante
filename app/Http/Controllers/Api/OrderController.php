@@ -492,7 +492,7 @@ class OrderController extends Controller
         // 9. Delegar notificación a la cocina y WebSockets a la cola en segundo plano
         SendKitchenNotification::dispatch($order, $isOnline);
 
-        // 10. Delegar webhook de n8n al QueueWorker (proceso asíncrono en segundo plano)
+        // 10. Delegar notificación multi-canal (Discord/Telegram) al QueueWorker (proceso asíncrono)
         SendOrderToN8n::dispatch($order);
 
         return response()->json($order->load('items.dish', 'items.extras.extra'), 201);

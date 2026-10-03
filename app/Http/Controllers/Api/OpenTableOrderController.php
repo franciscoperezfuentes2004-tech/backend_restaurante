@@ -209,7 +209,7 @@ class OpenTableOrderController extends Controller
                 Log::warning('Broadcast OrderStatusUpdated in OpenTableOrderController: ' . $e->getMessage());
             }
 
-            // Encolar webhook a n8n en segundo plano
+            // Encolar notificación multi-canal (Discord/Telegram) en segundo plano
             SendOrderToN8n::dispatch($order);
 
             return response()->json([

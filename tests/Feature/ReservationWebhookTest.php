@@ -14,8 +14,17 @@ class ReservationWebhookTest extends TestCase
 
     public function test_asignar_mesa_updates_reservation_and_dispatches_n8n_webhook(): void
     {
+        \App\Models\RestaurantSetting::updateOrCreate([], [
+            'restaurant_name'              => 'Aurum Test',
+            'active_notification_platform' => 'discord',
+            'discord_settings'             => [
+                'orders_webhook_url'       => 'https://discord.com/api/webhooks/test-orders',
+                'reservations_webhook_url' => 'https://discord.com/api/webhooks/test-reservations',
+            ],
+        ]);
+
         Http::fake([
-            '*' => Http::response(['message' => 'Workflow was started'], 200),
+            'https://discord.com/api/webhooks/*' => Http::response(['message' => 'ok'], 200),
         ]);
 
         $admin = User::factory()->create([
@@ -49,19 +58,26 @@ class ReservationWebhookTest extends TestCase
         $this->assertEquals('confirmada', $reservation->estado);
         $this->assertEquals('Mesa 5', $reservation->table_number);
 
-        Http::assertSent(function ($request) use ($reservation) {
-            return $request['cliente_email'] === 'correo_del_cliente@gmail.com'
-                && $request['cliente_nombre'] === 'Carlos Sánchez'
-                && $request['folio'] === $reservation->folio
-                && $request['personas'] === 4
-                && $request['mesa'] === 'Mesa 5';
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'discord.com/api/webhooks/test-reservations')
+                && isset($request['embeds'])
+                && count($request['embeds']) > 0;
         });
     }
 
     public function test_update_status_to_confirmed_dispatches_n8n_webhook(): void
     {
+        \App\Models\RestaurantSetting::updateOrCreate([], [
+            'restaurant_name'              => 'Aurum Test',
+            'active_notification_platform' => 'discord',
+            'discord_settings'             => [
+                'orders_webhook_url'       => 'https://discord.com/api/webhooks/test-orders',
+                'reservations_webhook_url' => 'https://discord.com/api/webhooks/test-reservations',
+            ],
+        ]);
+
         Http::fake([
-            '*' => Http::response(['message' => 'Workflow was started'], 200),
+            'https://discord.com/api/webhooks/*' => Http::response(['message' => 'ok'], 200),
         ]);
 
         $admin = User::factory()->create([
@@ -87,7 +103,8 @@ class ReservationWebhookTest extends TestCase
         $response->assertStatus(200);
 
         Http::assertSent(function ($request) {
-            return str_contains($request->url(), 'webhook');
+            return str_contains($request->url(), 'discord.com/api/webhooks/test-reservations')
+                && isset($request['embeds']);
         });
     }
 }

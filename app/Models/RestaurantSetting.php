@@ -60,12 +60,13 @@ class RestaurantSetting extends Model
         'banco_clabe',
         'banco_titular',
         'active_notification_platform',
-        'discord_webhook_url',
-        'telegram_bot_token',
-        'telegram_chat_id',
+        'discord_settings',
+        'telegram_settings',
     ];
 
     protected $casts = [
+        'discord_settings'       => 'array',
+        'telegram_settings'      => 'array',
         'schedule'              => 'array',
         'cover_images'          => 'array',
         'banner_images'         => 'array',

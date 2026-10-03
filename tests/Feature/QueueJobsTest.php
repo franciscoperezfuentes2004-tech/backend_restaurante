@@ -46,12 +46,21 @@ class QueueJobsTest extends TestCase
     }
 
     /**
-     * Test: SendOrderToN8n ejecuta la petición HTTP con el payload esperado.
+     * Test: SendOrderToN8n ejecuta la notificación multi-canal directamente a Discord/Telegram.
      */
     public function test_send_order_to_n8n_executes_http_post_with_order_payload(): void
     {
+        \App\Models\RestaurantSetting::updateOrCreate([], [
+            'restaurant_name'              => 'Aurum Test',
+            'active_notification_platform' => 'discord',
+            'discord_settings'             => [
+                'orders_webhook_url'       => 'https://discord.com/api/webhooks/test-orders',
+                'reservations_webhook_url' => 'https://discord.com/api/webhooks/test-reservations',
+            ],
+        ]);
+
         Http::fake([
-            '*/webhook/*' => Http::response(['success' => true], 200),
+            'https://discord.com/api/webhooks/*' => Http::response(['success' => true], 200),
         ]);
 
         $order = Order::create([
@@ -76,13 +85,10 @@ class QueueJobsTest extends TestCase
         $job = new SendOrderToN8n($order);
         $job->handle();
 
-        Http::assertSent(function ($request) use ($order) {
-            return str_contains($request->url(), 'webhook')
-                && $request['order_id'] === $order->id
-                && $request['folio'] === 'PED202609260001'
-                && $request['cliente'] === 'Carlos Santana'
-                && $request['total'] == 90.00
-                && $request['mesa'] === '4';
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'discord.com/api/webhooks/test-orders')
+                && isset($request['embeds'])
+                && count($request['embeds']) > 0;
         });
     }
 
