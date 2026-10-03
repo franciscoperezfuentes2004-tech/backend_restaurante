@@ -47,15 +47,6 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PasswordResetController;
 
 // Rutas públicas (sin autenticación)
-Route::get('/clean-db-production', function () {
-    try {
-        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--seed' => true, '--force' => true]);
-        return 'Base de datos limpiada y preparada para producción solo con datos esenciales.';
-    } catch (\Exception $e) {
-        return 'ERROR: ' . $e->getMessage();
-    }
-});
-
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login')->name('login');
 Route::get('/statistics/experiences', [LandingController::class, 'getStatistics']);
 Route::get('/reviews/landing',        [LandingController::class, 'getReviews']);
