@@ -32,24 +32,14 @@ class ImageController extends Controller
             $folder = 'dishes';
         }
 
-        // Si es una imagen compatible (JPG, PNG, WebP), la comprimimos a WebP
-        $extension = strtolower($file->getClientOriginalExtension());
-        if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
-            $compressed = ImageCompressionService::compressAndStore($file, $folder, 800, 75);
-            $relativePath = $compressed['path'];
-            $publicUrl = asset($compressed['url']);
-        } else {
-            // Store file on 'public' disk -> storage/app/public/{folder}
-            $relativePath = $file->store($folder, 'public');
-            // Generate public URL using Storage::url()
-            $publicUrl = asset(Storage::url($relativePath));
-        }
+        $path = $file->store($folder, 's3');
+        $imageUrl = Storage::disk('s3')->url($path);
 
-        AuditLogger::log('IMAGE_UPLOADED', 'media', "Imagen subida exitosamente en carpeta '{$folder}': {$relativePath}", $request->user(), 'info');
+        AuditLogger::log('IMAGE_UPLOADED', 'media', "Imagen subida exitosamente en carpeta '{$folder}': {$path}", $request->user(), 'info');
 
         return response()->json([
-            'url'  => $publicUrl,
-            'path' => $relativePath,
+            'url'  => $imageUrl,
+            'path' => $path,
         ], 201);
     }
 
@@ -64,7 +54,10 @@ class ImageController extends Controller
             $path = Str::after($path, '/storage/');
         }
 
-        if (Storage::disk('public')->exists($path)) {
+        if (Storage::disk('s3')->exists($path)) {
+            Storage::disk('s3')->delete($path);
+            AuditLogger::log('IMAGE_DELETED', 'media', "Imagen eliminada de S3: {$path}", $request->user(), 'info');
+        } elseif (Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
             AuditLogger::log('IMAGE_DELETED', 'media', "Imagen eliminada: {$path}", $request->user(), 'info');
         }

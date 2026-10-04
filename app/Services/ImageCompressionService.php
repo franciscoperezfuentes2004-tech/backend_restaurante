@@ -49,12 +49,14 @@ class ImageCompressionService
             $filename = "{$uniqueId}.webp";
             $relativePath = "{$folder}/{$filename}";
 
-            // Almacenar en el disco public
-            Storage::disk('public')->put($relativePath, (string) $encoded);
+            $disk = env('AWS_BUCKET') || config('filesystems.default') === 's3' ? 's3' : 'public';
+
+            // Almacenar en el disco correspondiente (s3 o public)
+            Storage::disk($disk)->put($relativePath, (string) $encoded);
 
             return [
                 'path'     => $relativePath,
-                'url'      => Storage::url($relativePath),
+                'url'      => Storage::disk($disk)->url($relativePath),
                 'filename' => $filename,
             ];
         } catch (Throwable $e) {
@@ -62,10 +64,11 @@ class ImageCompressionService
 
             // Fallback seguro: guardar el archivo directamente si es UploadedFile
             if ($file instanceof UploadedFile) {
-                $path = $file->store($folder, 'public');
+                $disk = env('AWS_BUCKET') || config('filesystems.default') === 's3' ? 's3' : 'public';
+                $path = $file->store($folder, $disk);
                 return [
                     'path'     => $path,
-                    'url'      => Storage::url($path),
+                    'url'      => Storage::disk($disk)->url($path),
                     'filename' => basename($path),
                 ];
             }
@@ -75,7 +78,7 @@ class ImageCompressionService
     }
 
     /**
-     * Elimina una imagen previa del almacenamiento si pertenece al disco público.
+     * Elimina una imagen previa del almacenamiento si pertenece al disco público o S3.
      *
      * @param string|null $imageUrl URL completa o relativa de la imagen previa
      * @param string $folder Carpeta donde debería residir (ej: 'dishes', 'categories')
@@ -94,8 +97,20 @@ class ImageCompressionService
                 $filename = basename(parse_url($imageUrl, PHP_URL_PATH));
                 $relativePath = $folder ? "{$folder}/{$filename}" : $filename;
 
+                if (Storage::disk('s3')->exists($relativePath)) {
+                    return Storage::disk('s3')->delete($relativePath);
+                }
                 if (Storage::disk('public')->exists($relativePath)) {
                     return Storage::disk('public')->delete($relativePath);
+                }
+            } else {
+                $parsedPath = parse_url($imageUrl, PHP_URL_PATH);
+                if ($parsedPath) {
+                    $filename = basename($parsedPath);
+                    $relativePath = $folder ? "{$folder}/{$filename}" : $filename;
+                    if (Storage::disk('s3')->exists($relativePath)) {
+                        return Storage::disk('s3')->delete($relativePath);
+                    }
                 }
             }
         } catch (Throwable $e) {

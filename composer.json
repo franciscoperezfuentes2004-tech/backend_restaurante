@@ -17,6 +17,7 @@
         "laravel/reverb": "*",
         "laravel/sanctum": "*",
         "laravel/tinker": "^3.0",
+        "league/flysystem-aws-s3-v3": "*",
         "predis/predis": "^3.6",
         "pusher/pusher-php-server": "*"
     },

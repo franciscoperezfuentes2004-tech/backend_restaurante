@@ -140,8 +140,8 @@ class DishController extends Controller
 
         $imageFile = $request->file('imagen') ?? $request->file('image') ?? $request->file('foto');
         if ($imageFile) {
-            $compressed = ImageCompressionService::compressAndStore($imageFile, 'dishes', 800, 75);
-            $data['image_url'] = $compressed['url'];
+            $path = $imageFile->store('dishes', 's3');
+            $data['image_url'] = Storage::disk('s3')->url($path);
         }
 
         if (!isset($data['allow_observations'])) {
@@ -225,8 +225,8 @@ class DishController extends Controller
         $imageFile = $request->file('imagen') ?? $request->file('image') ?? $request->file('foto');
         if ($imageFile) {
             ImageCompressionService::deleteOldImage($dish->image_url, 'dishes');
-            $compressed = ImageCompressionService::compressAndStore($imageFile, 'dishes', 800, 75);
-            $data['image_url'] = $compressed['url'];
+            $path = $imageFile->store('dishes', 's3');
+            $data['image_url'] = Storage::disk('s3')->url($path);
         }
 
         $extras = $data['extras'] ?? null;

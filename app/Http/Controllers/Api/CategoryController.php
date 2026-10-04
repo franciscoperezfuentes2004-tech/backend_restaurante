@@ -194,8 +194,8 @@ class CategoryController extends Controller
 
         $imageFile = $request->file('imagen') ?? $request->file('image') ?? $request->file('foto');
         if ($imageFile) {
-            $compressed = ImageCompressionService::compressAndStore($imageFile, 'categories', 800, 75);
-            $data['image_url'] = $compressed['url'];
+            $path = $imageFile->store('categories', 's3');
+            $data['image_url'] = Storage::disk('s3')->url($path);
         }
         unset($data['image'], $data['imagen'], $data['foto']);
 
@@ -279,8 +279,8 @@ class CategoryController extends Controller
         $imageFile = $request->file('imagen') ?? $request->file('image') ?? $request->file('foto');
         if ($imageFile) {
             ImageCompressionService::deleteOldImage($category->image_url, 'categories');
-            $compressed = ImageCompressionService::compressAndStore($imageFile, 'categories', 800, 75);
-            $data['image_url'] = $compressed['url'];
+            $path = $imageFile->store('categories', 's3');
+            $data['image_url'] = Storage::disk('s3')->url($path);
         }
         unset($data['image'], $data['imagen'], $data['foto']);
 
