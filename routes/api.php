@@ -470,3 +470,32 @@ Route::middleware(['auth:sanctum', EnsurePasswordIsChanged::class])->group(funct
         Route::patch('/drivers/{id}',                [DriverController::class, 'update']);
     });
 });
+
+Route::get('/test-discord', function () {
+    try {
+        $settings = \App\Models\RestaurantSetting::first(); 
+
+        $discordSettings = is_array($settings?->discord_settings)
+            ? $settings->discord_settings
+            : (json_decode($settings?->discord_settings ?? '[]', true) ?: []);
+
+        $url = $discordSettings['general_admin'] ?? null;
+
+        if (!$settings || empty($url)) {
+            return response()->json(['error' => 'No se encontró la URL de Discord para general_admin en la base de datos.'], 404);
+        }
+
+        $response = \Illuminate\Support\Facades\Http::post($url, [
+            'content' => '🚀 **¡Prueba de conexión exitosa!** El backend en Render se ha comunicado directamente con Discord, saltándose n8n. El sistema de notificaciones nativo está en línea.'
+        ]);
+
+        return response()->json([
+            'status' => $response->status(),
+            'success' => $response->successful(),
+            'body' => $response->json()
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});
