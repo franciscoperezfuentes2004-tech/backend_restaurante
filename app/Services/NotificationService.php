@@ -131,7 +131,7 @@ class NotificationService
                     ? $settings->discord_settings
                     : (json_decode($settings->discord_settings ?? '[]', true) ?: []);
 
-                $webhookUrl = $discordSettings['reservations_webhook_url'] ?? null;
+                $webhookUrl = $discordSettings['reservations'] ?? $discordSettings['reservations_webhook_url'] ?? null;
                 if (empty($webhookUrl)) {
                     Log::info("NotificationService: Webhook de Discord para reservaciones no configurado.");
                     return false;
@@ -146,7 +146,7 @@ class NotificationService
                     : (json_decode($settings->telegram_settings ?? '[]', true) ?: []);
 
                 $botToken = $telegramSettings['bot_token'] ?? null;
-                $chatId = $telegramSettings['reservations_chat_id'] ?? null;
+                $chatId = $telegramSettings['reservations'] ?? $telegramSettings['reservations_chat_id'] ?? null;
 
                 if (empty($botToken) || empty($chatId)) {
                     Log::info("NotificationService: Token o Chat ID de Telegram para reservaciones no configurado.");

@@ -391,15 +391,23 @@ class SettingsController extends Controller
             : (json_decode($settings->telegram_settings ?? '[]', true) ?: []);
 
         $data['discord_settings'] = [
-            'orders_webhook_url'       => $discordSettings['orders_webhook_url'] ?? '',
-            'reservations_webhook_url' => $discordSettings['reservations_webhook_url'] ?? '',
+            'reservations'             => $discordSettings['reservations'] ?? $discordSettings['reservations_webhook_url'] ?? '',
+            'system_alerts'            => $discordSettings['system_alerts'] ?? '',
+            'inventory'                => $discordSettings['inventory'] ?? '',
+            'cash_cuts'                => $discordSettings['cash_cuts'] ?? '',
+            'general_admin'            => $discordSettings['general_admin'] ?? '',
+            'reservations_webhook_url' => $discordSettings['reservations'] ?? $discordSettings['reservations_webhook_url'] ?? '',
         ];
         $data['discordSettings'] = $data['discord_settings'];
 
         $data['telegram_settings'] = [
             'bot_token'            => $telegramSettings['bot_token'] ?? '',
-            'orders_chat_id'       => $telegramSettings['orders_chat_id'] ?? '',
-            'reservations_chat_id' => $telegramSettings['reservations_chat_id'] ?? '',
+            'reservations'         => $telegramSettings['reservations'] ?? $telegramSettings['reservations_chat_id'] ?? '',
+            'system_alerts'        => $telegramSettings['system_alerts'] ?? '',
+            'inventory'            => $telegramSettings['inventory'] ?? '',
+            'cash_cuts'            => $telegramSettings['cash_cuts'] ?? '',
+            'general_admin'        => $telegramSettings['general_admin'] ?? '',
+            'reservations_chat_id' => $telegramSettings['reservations'] ?? $telegramSettings['reservations_chat_id'] ?? '',
         ];
         $data['telegramSettings'] = $data['telegram_settings'];
 
