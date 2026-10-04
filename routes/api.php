@@ -470,12 +470,3 @@ Route::middleware(['auth:sanctum', EnsurePasswordIsChanged::class])->group(funct
         Route::patch('/drivers/{id}',                [DriverController::class, 'update']);
     });
 });
-
-Route::get('/link-storage', function () {
-    try {
-        \Illuminate\Support\Facades\Artisan::call('storage:link');
-        return 'Carpeta de almacenamiento vinculada con éxito.';
-    } catch (\Exception $e) {
-        return 'Error: ' . $e->getMessage();
-    }
-});
