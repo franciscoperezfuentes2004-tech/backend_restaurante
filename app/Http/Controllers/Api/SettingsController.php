@@ -557,7 +557,8 @@ class SettingsController extends Controller
             'discord_settings.inventory'                => 'nullable|string|max:500',
             'discord_settings.cash_cuts'                => 'nullable|string|max:500',
             'discord_settings.general_admin'            => 'nullable|string|max:500',
-            'discord_settings.daily_financial_report'   => 'nullable|string|max:500',
+            'discord_settings.daily_financial_report'   => 'nullable|url',
+            'discordSettings.daily_financial_report'    => 'nullable|url',
             'telegram_settings'                         => 'nullable|array',
             'telegramSettings'                          => 'nullable|array',
             'telegram_settings.bot_token'               => 'nullable|string|max:255',
@@ -566,7 +567,8 @@ class SettingsController extends Controller
             'telegram_settings.inventory'               => 'nullable|string|max:255',
             'telegram_settings.cash_cuts'               => 'nullable|string|max:255',
             'telegram_settings.general_admin'           => 'nullable|string|max:255',
-            'telegram_settings.daily_financial_report'  => 'nullable|string|max:255',
+            'telegram_settings.daily_financial_report'  => 'nullable|string',
+            'telegramSettings.daily_financial_report'   => 'nullable|string',
 
             // Delivery & Operaciones
             'delivery_fee'           => 'nullable|numeric|min:0',

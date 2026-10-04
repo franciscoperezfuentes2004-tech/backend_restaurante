@@ -413,9 +413,9 @@ class NotificationService
                     ? $settings->discord_settings
                     : (json_decode($settings->discord_settings ?? '[]', true) ?: []);
 
-                $webhookUrl = $discordSettings['daily_financial_report'] ?? null;
+                $webhookUrl = trim((string) ($discordSettings['daily_financial_report'] ?? ''));
                 if (empty($webhookUrl)) {
-                    Log::info("NotificationService: Webhook de Discord para reporte financiero diario no configurado.");
+                    Log::info("NotificationService: Webhook de Discord para reporte financiero diario no configurado o vacío.");
                     return false;
                 }
 
@@ -427,11 +427,11 @@ class NotificationService
                     ? $settings->telegram_settings
                     : (json_decode($settings->telegram_settings ?? '[]', true) ?: []);
 
-                $botToken = $telegramSettings['bot_token'] ?? null;
-                $chatId = $telegramSettings['daily_financial_report'] ?? null;
+                $botToken = trim((string) ($telegramSettings['bot_token'] ?? ''));
+                $chatId   = trim((string) ($telegramSettings['daily_financial_report'] ?? ''));
 
                 if (empty($botToken) || empty($chatId)) {
-                    Log::info("NotificationService: Token o Chat ID de Telegram para reporte financiero diario no configurado.");
+                    Log::info("NotificationService: Token o Chat ID de Telegram para reporte financiero diario no configurado o vacío.");
                     return false;
                 }
 
@@ -452,6 +452,10 @@ class NotificationService
      */
     protected function sendDiscordFinancialReportMessage(string $webhookUrl, array $financialData, RestaurantSetting $settings): bool
     {
+        if (empty($webhookUrl)) {
+            return false;
+        }
+
         $restaurantName = $settings->restaurant_name ?? 'Restaurante';
         $fecha = $financialData['fecha'] ?? Carbon::yesterday('America/Mexico_City')->format('d/m/Y');
         $ventas = number_format((float) ($financialData['total_ventas'] ?? 0), 2);
@@ -486,7 +490,7 @@ class NotificationService
             ],
         ];
 
-        $response = Http::timeout(10)->post($webhookUrl, $payload);
+        $response = Http::timeout(5)->post($webhookUrl, $payload);
         if ($response->failed()) {
             Log::warning("NotificationService Discord Financial Report error ({$response->status()}): " . $response->body());
             return false;
@@ -500,6 +504,10 @@ class NotificationService
      */
     protected function sendTelegramFinancialReportMessage(string $botToken, string $chatId, array $financialData, RestaurantSetting $settings): bool
     {
+        if (empty($botToken) || empty($chatId)) {
+            return false;
+        }
+
         $restaurantName = htmlspecialchars($settings->restaurant_name ?? 'Restaurante', ENT_QUOTES);
         $fecha = htmlspecialchars($financialData['fecha'] ?? Carbon::yesterday('America/Mexico_City')->format('d/m/Y'), ENT_QUOTES);
         $ventas = number_format((float) ($financialData['total_ventas'] ?? 0), 2);
@@ -520,7 +528,7 @@ class NotificationService
         $text .= "<i>{$restaurantName} • Reporte Financiero Diario</i>";
 
         $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
-        $response = Http::timeout(10)->post($url, [
+        $response = Http::timeout(5)->post($url, [
             'chat_id'    => $chatId,
             'text'       => $text,
             'parse_mode' => 'HTML',

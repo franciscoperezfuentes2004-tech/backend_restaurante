@@ -200,8 +200,12 @@ class AuthController extends Controller
         $emailEnmascarado = NotificationService::maskEmail($user->email);
         NotificationService::create('login_success', 'Inicio de Sesión', "Inicio de sesión: {$emailEnmascarado}", ['user_id' => $user->id, 'ip' => $ip], $user->id);
 
-        // Validación y envío del reporte financiero diario automático al primer login del día
-        $this->checkAndSendDailyFinancialReport();
+        // Validación y envío del reporte financiero diario automático al primer login del día (Blindaje aislado)
+        try {
+            $this->checkAndSendDailyFinancialReport();
+        } catch (\Throwable $e) {
+            Log::error("Error crítico aislado en reporte financiero diario durante login: " . $e->getMessage());
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -442,6 +446,7 @@ class AuthController extends Controller
 
     /**
      * Valida y dispara el reporte financiero diario automático al primer login del día.
+     * Totalmente blindado con try-catch para garantizar que NUNCA bloquee el flujo de autenticación.
      */
     protected function checkAndSendDailyFinancialReport(): void
     {
@@ -451,16 +456,27 @@ class AuthController extends Controller
                 return;
             }
 
-            $nowMexico = Carbon::now('America/Mexico_City');
+            $today = Carbon::today('America/Mexico_City');
+            $todayString = $today->toDateString();
 
-            // Verificar si last_financial_report_date es hoy o es diferente/nulo
+            // Verificar si last_financial_report_date es diferente a hoy (o nulo)
             $isToday = false;
             if (!empty($settings->last_financial_report_date)) {
-                $lastReportDate = Carbon::parse($settings->last_financial_report_date, 'America/Mexico_City');
-                $isToday = $lastReportDate->isSameDay($nowMexico);
+                $lastReportDate = Carbon::parse($settings->last_financial_report_date, 'America/Mexico_City')->toDateString();
+                $isToday = ($lastReportDate === $todayString);
             }
 
             if (!$isToday) {
+                // Actualizar SIEMPRE la columna last_financial_report_date a Carbon::today()
+                // para evitar que el sistema intente recalcular y reenviar en cada login subsiguiente de hoy.
+                try {
+                    $settings->last_financial_report_date = $today;
+                    $settings->save();
+                } catch (\Throwable $saveEx) {
+                    Log::error("Error actualizando last_financial_report_date en settings: " . $saveEx->getMessage());
+                }
+
+                // Cálculo y envío de notificación en bloque try-catch aislado
                 try {
                     $yesterdayStart = Carbon::yesterday('America/Mexico_City')->startOfDay();
                     $yesterdayEnd   = Carbon::yesterday('America/Mexico_City')->endOfDay();
@@ -497,18 +513,14 @@ class AuthController extends Controller
                     ];
 
                     app(NotificationService::class)->sendDailyFinancialReport($datos);
-
-                    // Actualizar last_financial_report_date a la fecha de hoy y guardar
-                    $settings->last_financial_report_date = $nowMexico->toDateString();
-                    $settings->save();
                 } catch (\Throwable $reportEx) {
-                    Log::error("Error procesando reporte financiero diario en login: " . $reportEx->getMessage(), [
+                    Log::error("Error procesando o enviando reporte financiero diario en login: " . $reportEx->getMessage(), [
                         'trace' => $reportEx->getTraceAsString(),
                     ]);
                 }
             }
         } catch (\Throwable $e) {
-            Log::error("Error en validación de reporte financiero diario: " . $e->getMessage());
+            Log::error("Error en verificación del reporte financiero diario: " . $e->getMessage());
         }
     }
 }
