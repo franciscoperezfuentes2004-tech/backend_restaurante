@@ -542,13 +542,19 @@ class SettingsController extends Controller
             'activeNotificationPlatform'               => 'nullable|string|in:none,discord,telegram',
             'discord_settings'                          => 'nullable|array',
             'discordSettings'                           => 'nullable|array',
-            'discord_settings.orders_webhook_url'       => 'nullable|string|max:500',
-            'discord_settings.reservations_webhook_url' => 'nullable|string|max:500',
+            'discord_settings.reservations'             => 'nullable|string|max:500',
+            'discord_settings.system_alerts'            => 'nullable|string|max:500',
+            'discord_settings.inventory'                => 'nullable|string|max:500',
+            'discord_settings.cash_cuts'                => 'nullable|string|max:500',
+            'discord_settings.general_admin'            => 'nullable|string|max:500',
             'telegram_settings'                         => 'nullable|array',
             'telegramSettings'                          => 'nullable|array',
             'telegram_settings.bot_token'               => 'nullable|string|max:255',
-            'telegram_settings.orders_chat_id'          => 'nullable|string|max:255',
-            'telegram_settings.reservations_chat_id'    => 'nullable|string|max:255',
+            'telegram_settings.reservations'            => 'nullable|string|max:255',
+            'telegram_settings.system_alerts'           => 'nullable|string|max:255',
+            'telegram_settings.inventory'               => 'nullable|string|max:255',
+            'telegram_settings.cash_cuts'               => 'nullable|string|max:255',
+            'telegram_settings.general_admin'           => 'nullable|string|max:255',
 
             // Delivery & Operaciones
             'delivery_fee'           => 'nullable|numeric|min:0',
@@ -809,8 +815,11 @@ class SettingsController extends Controller
                 $ds = json_decode($ds, true) ?: [];
             }
             $updateData['discord_settings'] = [
-                'orders_webhook_url'       => $ds['orders_webhook_url'] ?? $ds['ordersWebhookUrl'] ?? null,
-                'reservations_webhook_url' => $ds['reservations_webhook_url'] ?? $ds['reservationsWebhookUrl'] ?? null,
+                'reservations'  => $ds['reservations'] ?? null,
+                'system_alerts' => $ds['system_alerts'] ?? null,
+                'inventory'     => $ds['inventory'] ?? null,
+                'cash_cuts'     => $ds['cash_cuts'] ?? null,
+                'general_admin' => $ds['general_admin'] ?? null,
             ];
         }
 
@@ -820,9 +829,12 @@ class SettingsController extends Controller
                 $ts = json_decode($ts, true) ?: [];
             }
             $updateData['telegram_settings'] = [
-                'bot_token'            => $ts['bot_token'] ?? $ts['botToken'] ?? null,
-                'orders_chat_id'       => $ts['orders_chat_id'] ?? $ts['ordersChatId'] ?? null,
-                'reservations_chat_id' => $ts['reservations_chat_id'] ?? $ts['reservationsChatId'] ?? null,
+                'bot_token'     => $ts['bot_token'] ?? $ts['botToken'] ?? null,
+                'reservations'  => $ts['reservations'] ?? null,
+                'system_alerts' => $ts['system_alerts'] ?? null,
+                'inventory'     => $ts['inventory'] ?? null,
+                'cash_cuts'     => $ts['cash_cuts'] ?? null,
+                'general_admin' => $ts['general_admin'] ?? null,
             ];
         }
 
