@@ -470,3 +470,12 @@ Route::middleware(['auth:sanctum', EnsurePasswordIsChanged::class])->group(funct
         Route::patch('/drivers/{id}',                [DriverController::class, 'update']);
     });
 });
+
+Route::get('/migrate-production', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return 'Migración ejecutada con éxito.';
+    } catch (\Exception $e) {
+        return 'ERROR: ' . $e->getMessage();
+    }
+});
