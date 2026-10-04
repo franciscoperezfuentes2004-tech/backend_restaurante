@@ -396,18 +396,20 @@ class SettingsController extends Controller
             'inventory'                => $discordSettings['inventory'] ?? '',
             'cash_cuts'                => $discordSettings['cash_cuts'] ?? '',
             'general_admin'            => $discordSettings['general_admin'] ?? '',
+            'daily_financial_report'   => $discordSettings['daily_financial_report'] ?? '',
             'reservations_webhook_url' => $discordSettings['reservations'] ?? $discordSettings['reservations_webhook_url'] ?? '',
         ];
         $data['discordSettings'] = $data['discord_settings'];
 
         $data['telegram_settings'] = [
-            'bot_token'            => $telegramSettings['bot_token'] ?? '',
-            'reservations'         => $telegramSettings['reservations'] ?? $telegramSettings['reservations_chat_id'] ?? '',
-            'system_alerts'        => $telegramSettings['system_alerts'] ?? '',
-            'inventory'            => $telegramSettings['inventory'] ?? '',
-            'cash_cuts'            => $telegramSettings['cash_cuts'] ?? '',
-            'general_admin'        => $telegramSettings['general_admin'] ?? '',
-            'reservations_chat_id' => $telegramSettings['reservations'] ?? $telegramSettings['reservations_chat_id'] ?? '',
+            'bot_token'              => $telegramSettings['bot_token'] ?? '',
+            'reservations'           => $telegramSettings['reservations'] ?? $telegramSettings['reservations_chat_id'] ?? '',
+            'system_alerts'          => $telegramSettings['system_alerts'] ?? '',
+            'inventory'              => $telegramSettings['inventory'] ?? '',
+            'cash_cuts'              => $telegramSettings['cash_cuts'] ?? '',
+            'general_admin'          => $telegramSettings['general_admin'] ?? '',
+            'daily_financial_report' => $telegramSettings['daily_financial_report'] ?? '',
+            'reservations_chat_id'   => $telegramSettings['reservations'] ?? $telegramSettings['reservations_chat_id'] ?? '',
         ];
         $data['telegramSettings'] = $data['telegram_settings'];
 
@@ -555,6 +557,7 @@ class SettingsController extends Controller
             'discord_settings.inventory'                => 'nullable|string|max:500',
             'discord_settings.cash_cuts'                => 'nullable|string|max:500',
             'discord_settings.general_admin'            => 'nullable|string|max:500',
+            'discord_settings.daily_financial_report'   => 'nullable|string|max:500',
             'telegram_settings'                         => 'nullable|array',
             'telegramSettings'                          => 'nullable|array',
             'telegram_settings.bot_token'               => 'nullable|string|max:255',
@@ -563,6 +566,7 @@ class SettingsController extends Controller
             'telegram_settings.inventory'               => 'nullable|string|max:255',
             'telegram_settings.cash_cuts'               => 'nullable|string|max:255',
             'telegram_settings.general_admin'           => 'nullable|string|max:255',
+            'telegram_settings.daily_financial_report'  => 'nullable|string|max:255',
 
             // Delivery & Operaciones
             'delivery_fee'           => 'nullable|numeric|min:0',
@@ -823,11 +827,12 @@ class SettingsController extends Controller
                 $ds = json_decode($ds, true) ?: [];
             }
             $updateData['discord_settings'] = [
-                'reservations'  => $ds['reservations'] ?? null,
-                'system_alerts' => $ds['system_alerts'] ?? null,
-                'inventory'     => $ds['inventory'] ?? null,
-                'cash_cuts'     => $ds['cash_cuts'] ?? null,
-                'general_admin' => $ds['general_admin'] ?? null,
+                'reservations'           => $ds['reservations'] ?? null,
+                'system_alerts'          => $ds['system_alerts'] ?? null,
+                'inventory'              => $ds['inventory'] ?? null,
+                'cash_cuts'              => $ds['cash_cuts'] ?? null,
+                'general_admin'          => $ds['general_admin'] ?? null,
+                'daily_financial_report' => $ds['daily_financial_report'] ?? null,
             ];
         }
 
@@ -837,12 +842,13 @@ class SettingsController extends Controller
                 $ts = json_decode($ts, true) ?: [];
             }
             $updateData['telegram_settings'] = [
-                'bot_token'     => $ts['bot_token'] ?? $ts['botToken'] ?? null,
-                'reservations'  => $ts['reservations'] ?? null,
-                'system_alerts' => $ts['system_alerts'] ?? null,
-                'inventory'     => $ts['inventory'] ?? null,
-                'cash_cuts'     => $ts['cash_cuts'] ?? null,
-                'general_admin' => $ts['general_admin'] ?? null,
+                'bot_token'              => $ts['bot_token'] ?? $ts['botToken'] ?? null,
+                'reservations'           => $ts['reservations'] ?? null,
+                'system_alerts'          => $ts['system_alerts'] ?? null,
+                'inventory'              => $ts['inventory'] ?? null,
+                'cash_cuts'              => $ts['cash_cuts'] ?? null,
+                'general_admin'          => $ts['general_admin'] ?? null,
+                'daily_financial_report' => $ts['daily_financial_report'] ?? null,
             ];
         }
 

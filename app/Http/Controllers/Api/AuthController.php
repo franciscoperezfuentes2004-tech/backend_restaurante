@@ -4,15 +4,20 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Order;
+use App\Models\RestaurantSetting;
+use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\UserSession;
 use App\Services\AuditLogger;
 use App\Services\PermissionService;
 use App\Services\NotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
@@ -194,6 +199,9 @@ class AuthController extends Controller
         ]);
         $emailEnmascarado = NotificationService::maskEmail($user->email);
         NotificationService::create('login_success', 'Inicio de Sesión', "Inicio de sesión: {$emailEnmascarado}", ['user_id' => $user->id, 'ip' => $ip], $user->id);
+
+        // Validación y envío del reporte financiero diario automático al primer login del día
+        $this->checkAndSendDailyFinancialReport();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -430,5 +438,77 @@ class AuthController extends Controller
         if (str_contains($ua, 'Android')) return 'Android';
         if (str_contains($ua, 'iPhone') || str_contains($ua, 'iPad')) return 'iOS';
         return 'Sistema Operativo';
+    }
+
+    /**
+     * Valida y dispara el reporte financiero diario automático al primer login del día.
+     */
+    protected function checkAndSendDailyFinancialReport(): void
+    {
+        try {
+            $settings = RestaurantSetting::first();
+            if (!$settings) {
+                return;
+            }
+
+            $nowMexico = Carbon::now('America/Mexico_City');
+
+            // Verificar si last_financial_report_date es hoy o es diferente/nulo
+            $isToday = false;
+            if (!empty($settings->last_financial_report_date)) {
+                $lastReportDate = Carbon::parse($settings->last_financial_report_date, 'America/Mexico_City');
+                $isToday = $lastReportDate->isSameDay($nowMexico);
+            }
+
+            if (!$isToday) {
+                try {
+                    $yesterdayStart = Carbon::yesterday('America/Mexico_City')->startOfDay();
+                    $yesterdayEnd   = Carbon::yesterday('America/Mexico_City')->endOfDay();
+
+                    // 1. Total ventas (órdenes pagadas o completadas creadas en el día de ayer)
+                    $paidOrders = Order::whereBetween('created_at', [$yesterdayStart, $yesterdayEnd])
+                        ->where(function ($q) {
+                            $q->where('payment_status', 'paid')
+                              ->orWhere('status', 'completed')
+                              ->orWhere('status', 'entregado');
+                        });
+
+                    $totalVentas  = round((float) $paidOrders->sum('total_amount'), 2);
+                    $totalOrdenes = (int) $paidOrders->count();
+
+                    // 2. Total gastos (entradas de inventario y mermas creadas en el día de ayer)
+                    $costoEntradas = (float) StockMovement::where('type', 'entrada')
+                        ->whereBetween('created_at', [$yesterdayStart, $yesterdayEnd])
+                        ->sum(DB::raw('quantity * COALESCE(cost_per_unit, 0)'));
+
+                    $costoMermas = (float) StockMovement::where('type', 'merma')
+                        ->whereBetween('created_at', [$yesterdayStart, $yesterdayEnd])
+                        ->sum(DB::raw('quantity * COALESCE(cost_per_unit, 0)'));
+
+                    $totalGastos = round($costoEntradas + $costoMermas, 2);
+                    $balance     = round($totalVentas - $totalGastos, 2);
+
+                    $datos = [
+                        'fecha'         => Carbon::yesterday('America/Mexico_City')->format('d/m/Y'),
+                        'total_ventas'  => $totalVentas,
+                        'total_gastos'  => $totalGastos,
+                        'balance'       => $balance,
+                        'total_ordenes' => $totalOrdenes,
+                    ];
+
+                    app(NotificationService::class)->sendDailyFinancialReport($datos);
+
+                    // Actualizar last_financial_report_date a la fecha de hoy y guardar
+                    $settings->last_financial_report_date = $nowMexico->toDateString();
+                    $settings->save();
+                } catch (\Throwable $reportEx) {
+                    Log::error("Error procesando reporte financiero diario en login: " . $reportEx->getMessage(), [
+                        'trace' => $reportEx->getTraceAsString(),
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error("Error en validación de reporte financiero diario: " . $e->getMessage());
+        }
     }
 }

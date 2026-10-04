@@ -62,9 +62,11 @@ class RestaurantSetting extends Model
         'active_notification_platform',
         'discord_settings',
         'telegram_settings',
+        'last_financial_report_date',
     ];
 
     protected $casts = [
+        'last_financial_report_date' => 'date',
         'discord_settings'       => 'array',
         'telegram_settings'      => 'array',
         'schedule'              => 'array',

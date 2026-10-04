@@ -391,4 +391,146 @@ class NotificationService
 
         return true;
     }
+
+    /**
+     * Envía reporte financiero diario a la plataforma activa configurada.
+     */
+    public function sendDailyFinancialReport(array $financialData): bool
+    {
+        try {
+            $settings = RestaurantSetting::first();
+            if (!$settings) {
+                return false;
+            }
+
+            $platform = $settings->active_notification_platform ?? 'none';
+            if ($platform === 'none') {
+                return false;
+            }
+
+            if ($platform === 'discord') {
+                $discordSettings = is_array($settings->discord_settings)
+                    ? $settings->discord_settings
+                    : (json_decode($settings->discord_settings ?? '[]', true) ?: []);
+
+                $webhookUrl = $discordSettings['daily_financial_report'] ?? null;
+                if (empty($webhookUrl)) {
+                    Log::info("NotificationService: Webhook de Discord para reporte financiero diario no configurado.");
+                    return false;
+                }
+
+                return $this->sendDiscordFinancialReportMessage($webhookUrl, $financialData, $settings);
+            }
+
+            if ($platform === 'telegram') {
+                $telegramSettings = is_array($settings->telegram_settings)
+                    ? $settings->telegram_settings
+                    : (json_decode($settings->telegram_settings ?? '[]', true) ?: []);
+
+                $botToken = $telegramSettings['bot_token'] ?? null;
+                $chatId = $telegramSettings['daily_financial_report'] ?? null;
+
+                if (empty($botToken) || empty($chatId)) {
+                    Log::info("NotificationService: Token o Chat ID de Telegram para reporte financiero diario no configurado.");
+                    return false;
+                }
+
+                return $this->sendTelegramFinancialReportMessage($botToken, $chatId, $financialData, $settings);
+            }
+
+            return false;
+        } catch (\Throwable $e) {
+            Log::error("NotificationService [sendDailyFinancialReport] Error: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Envía el mensaje de reporte financiero diario a Discord.
+     */
+    protected function sendDiscordFinancialReportMessage(string $webhookUrl, array $financialData, RestaurantSetting $settings): bool
+    {
+        $restaurantName = $settings->restaurant_name ?? 'Restaurante';
+        $fecha = $financialData['fecha'] ?? Carbon::yesterday('America/Mexico_City')->format('d/m/Y');
+        $ventas = number_format((float) ($financialData['total_ventas'] ?? 0), 2);
+        $gastos = number_format((float) ($financialData['total_gastos'] ?? 0), 2);
+        $balance = number_format((float) ($financialData['balance'] ?? (($financialData['total_ventas'] ?? 0) - ($financialData['total_gastos'] ?? 0))), 2);
+        $ordenes = isset($financialData['total_ordenes']) ? (int) $financialData['total_ordenes'] : null;
+
+        $fields = [
+            ['name' => '💰 Total Ventas', 'value' => "\${$ventas}", 'inline' => true],
+            ['name' => '📉 Total Gastos', 'value' => "\${$gastos}", 'inline' => true],
+            ['name' => '💵 Balance', 'value' => "**\${$balance}**", 'inline' => true],
+        ];
+
+        if ($ordenes !== null) {
+            $fields[] = ['name' => '🧾 Pedidos Concretados', 'value' => (string) $ordenes, 'inline' => true];
+        }
+
+        $payload = [
+            'username' => "{$restaurantName} • Finanzas",
+            'content'  => "📊 **Cierre Financiero del Día Anterior ({$fecha})**\n💰 Total Ventas: \${$ventas}\n📉 Total Gastos: \${$gastos}\n💵 Balance: \${$balance}",
+            'embeds'   => [
+                [
+                    'title'       => "📊 Cierre Financiero del Día Anterior",
+                    'description' => "Resumen financiero consolidado correspondiente al día **{$fecha}**.",
+                    'color'       => 0x10B981, // Verde esmeralda
+                    'fields'      => $fields,
+                    'footer'      => [
+                        'text' => "Notificación Automática de Cierre Diario • {$restaurantName}",
+                    ],
+                    'timestamp'   => now()->toISOString(),
+                ],
+            ],
+        ];
+
+        $response = Http::timeout(10)->post($webhookUrl, $payload);
+        if ($response->failed()) {
+            Log::warning("NotificationService Discord Financial Report error ({$response->status()}): " . $response->body());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Envía el mensaje de reporte financiero diario a Telegram.
+     */
+    protected function sendTelegramFinancialReportMessage(string $botToken, string $chatId, array $financialData, RestaurantSetting $settings): bool
+    {
+        $restaurantName = htmlspecialchars($settings->restaurant_name ?? 'Restaurante', ENT_QUOTES);
+        $fecha = htmlspecialchars($financialData['fecha'] ?? Carbon::yesterday('America/Mexico_City')->format('d/m/Y'), ENT_QUOTES);
+        $ventas = number_format((float) ($financialData['total_ventas'] ?? 0), 2);
+        $gastos = number_format((float) ($financialData['total_gastos'] ?? 0), 2);
+        $balance = number_format((float) ($financialData['balance'] ?? (($financialData['total_ventas'] ?? 0) - ($financialData['total_gastos'] ?? 0))), 2);
+        $ordenes = isset($financialData['total_ordenes']) ? (int) $financialData['total_ordenes'] : null;
+
+        $text = "📊 <b>Cierre Financiero del Día Anterior</b>\n";
+        $text .= "<i>Fecha: {$fecha}</i>\n";
+        $text .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $text .= "💰 <b>Total Ventas:</b> \${$ventas}\n";
+        $text .= "📉 <b>Total Gastos:</b> \${$gastos}\n";
+        $text .= "💵 <b>Balance:</b> \${$balance}\n";
+        if ($ordenes !== null) {
+            $text .= "🧾 <b>Pedidos Concretados:</b> {$ordenes}\n";
+        }
+        $text .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $text .= "<i>{$restaurantName} • Reporte Financiero Diario</i>";
+
+        $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
+        $response = Http::timeout(10)->post($url, [
+            'chat_id'    => $chatId,
+            'text'       => $text,
+            'parse_mode' => 'HTML',
+        ]);
+
+        if ($response->failed()) {
+            Log::warning("NotificationService Telegram Financial Report error ({$response->status()}): " . $response->body());
+            return false;
+        }
+
+        return true;
+    }
 }
