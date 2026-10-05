@@ -22,15 +22,19 @@ class IngredientController extends Controller
     {
         $ingredient->loadMissing('supplier');
 
+        $categoryObj = IngredientCategory::where('name', $ingredient->category)->first();
+
         return [
-            'id'            => $ingredient->id,
-            'name'          => $ingredient->name,
-            'category'      => $ingredient->category,
-            'unit'          => $ingredient->unit,
-            'supplier_id'   => $ingredient->supplier_id,
-            'supplier_name' => $ingredient->supplier ? ($ingredient->supplier->company_name ?? $ingredient->supplier->name) : null,
-            'notes'         => $ingredient->notes,
-            'created_at'    => $ingredient->created_at ? $ingredient->created_at->format('Y-m-d H:i:s') : null,
+            'id'              => $ingredient->id,
+            'name'            => $ingredient->name,
+            'category_id'     => $categoryObj?->id,
+            'category'        => $ingredient->category,
+            'unit'            => $ingredient->unit,
+            'unit_of_measure' => $ingredient->unit,
+            'supplier_id'     => $ingredient->supplier_id,
+            'supplier_name'   => $ingredient->supplier ? ($ingredient->supplier->company_name ?? $ingredient->supplier->name) : null,
+            'notes'           => $ingredient->notes,
+            'created_at'      => $ingredient->created_at ? $ingredient->created_at->format('Y-m-d H:i:s') : null,
         ];
     }
 
@@ -90,7 +94,7 @@ class IngredientController extends Controller
      */
     public function getCategories()
     {
-        $categories = IngredientCategory::orderBy('name', 'asc')->pluck('name')->values()->all();
+        $categories = IngredientCategory::orderBy('name', 'asc')->get(['id', 'name']);
 
         return response()->json([
             'categories' => $categories
@@ -115,7 +119,7 @@ class IngredientController extends Controller
 
         return response()->json([
             'message'  => 'Categoría creada correctamente',
-            'category' => $category->name,
+            'category' => $category,
         ], 201);
     }
 
