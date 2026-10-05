@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateIngredientRequest;
 use App\Models\Ingredient;
 use App\Models\IngredientCategory;
 use App\Models\Supplier;
+use App\Models\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
@@ -20,9 +21,17 @@ class IngredientController extends Controller
      */
     private function formatIngredient(Ingredient $ingredient): array
     {
-        $ingredient->loadMissing('supplier');
+        $ingredient->loadMissing(['supplier', 'stock']);
 
         $categoryObj = IngredientCategory::where('name', $ingredient->category)->first();
+
+        $minQty = $ingredient->stock 
+            ? (float) $ingredient->stock->min_quantity 
+            : (float) ($ingredient->stock_minimo ?? 0);
+
+        $currentQty = $ingredient->stock 
+            ? (float) $ingredient->stock->quantity 
+            : (float) ($ingredient->stock_actual ?? 0);
 
         return [
             'id'              => $ingredient->id,
@@ -34,6 +43,10 @@ class IngredientController extends Controller
             'supplier_id'     => $ingredient->supplier_id,
             'supplier_name'   => $ingredient->supplier ? ($ingredient->supplier->company_name ?? $ingredient->supplier->name) : null,
             'notes'           => $ingredient->notes,
+            'stock_actual'    => $currentQty,
+            'current_stock'   => $currentQty,
+            'stock_minimo'    => $minQty,
+            'min_stock'       => $minQty,
             'created_at'      => $ingredient->created_at ? $ingredient->created_at->format('Y-m-d H:i:s') : null,
         ];
     }
@@ -44,7 +57,7 @@ class IngredientController extends Controller
     public function index(IndexIngredientRequest $request)
     {
         $validated = $request->validated();
-        $query = Ingredient::with('supplier');
+        $query = Ingredient::with(['supplier', 'stock']);
 
         if (!empty($validated['supplier_id'])) {
             $query->where('supplier_id', $validated['supplier_id']);
@@ -133,17 +146,34 @@ class IngredientController extends Controller
         // ── Resolver category_id → nombre de categoría (columna DB: category) ──
         $category = IngredientCategory::findOrFail($validated['category_id']);
 
+        $minStock = isset($validated['min_stock']) 
+            ? (float) $validated['min_stock'] 
+            : (isset($validated['stock_minimo']) ? (float) $validated['stock_minimo'] : 0.0);
+
         $ingredient = Ingredient::create([
-            'name'        => trim(strip_tags($validated['name'])),
-            'category'    => $category->name,
+            'name'         => trim(strip_tags($validated['name'])),
+            'category'     => $category->name,
             // unit_of_measure (frontend) → unit (columna DB)
-            'unit'        => $validated['unit_of_measure'],
-            'base_cost'   => 0.00,
-            'supplier_id' => $validated['supplier_id'] ?? null,
-            'notes'       => isset($validated['notes'])
+            'unit'         => $validated['unit_of_measure'],
+            'base_cost'    => 0.00,
+            'supplier_id'  => $validated['supplier_id'] ?? null,
+            'stock_actual' => 0.0,
+            'stock_minimo' => $minStock,
+            'notes'        => isset($validated['notes'])
                 ? trim(strip_tags($validated['notes']))
                 : null,
         ]);
+
+        // Registrar / sincronizar de inmediato en la tabla 'stock' para control de existencias y alertas
+        Stock::updateOrCreate(
+            ['ingredient_id' => $ingredient->id],
+            [
+                'quantity'        => 0.0,
+                'min_quantity'    => $minStock,
+                'supplier_id'     => $ingredient->supplier_id,
+                'last_updated_by' => auth()->id(),
+            ]
+        );
 
         return response()->json([
             'message'    => 'Ingrediente creado correctamente',
@@ -167,7 +197,7 @@ class IngredientController extends Controller
 
         // ── Resolver category_id → nombre de categoría (columna DB: category) ──
         if (array_key_exists('category_id', $validated)) {
-            $category       = IngredientCategory::findOrFail($validated['category_id']);
+            $category         = IngredientCategory::findOrFail($validated['category_id']);
             $data['category'] = $category->name;
         }
 
@@ -180,6 +210,17 @@ class IngredientController extends Controller
             $data['supplier_id'] = $validated['supplier_id'];
         }
 
+        $minStock = null;
+        if (array_key_exists('min_stock', $validated)) {
+            $minStock = (float) $validated['min_stock'];
+        } elseif (array_key_exists('stock_minimo', $validated)) {
+            $minStock = (float) $validated['stock_minimo'];
+        }
+
+        if ($minStock !== null) {
+            $data['stock_minimo'] = $minStock;
+        }
+
         if (array_key_exists('notes', $validated)) {
             $data['notes'] = $validated['notes'] !== null
                 ? trim(strip_tags($validated['notes']))
@@ -187,6 +228,21 @@ class IngredientController extends Controller
         }
 
         $ingredient->update($data);
+
+        // Mantener sincronizado el registro en 'stock'
+        if ($minStock !== null || array_key_exists('supplier_id', $validated)) {
+            $stockData = [
+                'supplier_id'     => $ingredient->supplier_id,
+                'last_updated_by' => auth()->id(),
+            ];
+            if ($minStock !== null) {
+                $stockData['min_quantity'] = $minStock;
+            }
+            Stock::updateOrCreate(
+                ['ingredient_id' => $ingredient->id],
+                $stockData
+            );
+        }
 
         return response()->json([
             'message'    => 'Ingrediente actualizado correctamente',

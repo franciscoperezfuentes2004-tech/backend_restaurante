@@ -28,6 +28,16 @@ class StoreIngredientRequest extends FormRequest
             $patches['notes'] = trim(strip_tags((string) $this->notes));
         }
 
+        if ($this->has('min_stock')) {
+            $val = $this->min_stock;
+            $patches['min_stock'] = ($val === '' || $val === null) ? 0.0 : $val;
+        }
+
+        if ($this->has('stock_minimo')) {
+            $val = $this->stock_minimo;
+            $patches['stock_minimo'] = ($val === '' || $val === null) ? 0.0 : $val;
+        }
+
         if (!empty($patches)) {
             $this->merge($patches);
         }
@@ -63,6 +73,10 @@ class StoreIngredientRequest extends FormRequest
                 Rule::in(['kg', 'g', 'L', 'ml', 'piezas', 'cajas', 'bolsas', 'latas']),
             ],
 
+            // ── Stock Mínimo (Umbral para alertas de stock bajo) ───────────
+            'min_stock'       => 'nullable|numeric|gte:0|max:999999.99',
+            'stock_minimo'    => 'nullable|numeric|gte:0|max:999999.99',
+
             // ── Notas (texto libre opcional) ──────────────────────────────
             'notes'           => 'nullable|string|max:250',
         ];
@@ -82,6 +96,12 @@ class StoreIngredientRequest extends FormRequest
             'category_id.exists'       => 'La categoría seleccionada no existe.',
             'unit_of_measure.required' => 'La unidad de medida es obligatoria.',
             'unit_of_measure.in'       => 'La unidad de medida debe ser: kg, g, L, ml, piezas, cajas, bolsas o latas.',
+            'min_stock.numeric'        => 'El stock mínimo debe ser un número válido.',
+            'min_stock.gte'            => 'El stock mínimo no puede ser negativo.',
+            'min_stock.max'            => 'El stock mínimo no puede superar 999,999.99.',
+            'stock_minimo.numeric'     => 'El stock mínimo debe ser un número válido.',
+            'stock_minimo.gte'         => 'El stock mínimo no puede ser negativo.',
+            'stock_minimo.max'         => 'El stock mínimo no puede superar 999,999.99.',
             'notes.max'                => 'Las notas no deben superar los 250 caracteres.',
         ];
     }
