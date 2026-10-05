@@ -541,4 +541,173 @@ class NotificationService
 
         return true;
     }
+
+    /**
+     * Envía una alerta de error crítico del sistema al canal de desarrollador configurado.
+     */
+    public function sendDeveloperErrorAlert(\Throwable $e, string $url = 'Desconocida'): bool
+    {
+        try {
+            $settings = RestaurantSetting::first();
+            if (!$settings) {
+                return false;
+            }
+
+            $platform = $settings->active_notification_platform ?? 'none';
+            if ($platform === 'none') {
+                return false;
+            }
+
+            $mensaje   = mb_substr($e->getMessage() ?: get_class($e), 0, 500);
+            $archivo   = $e->getFile();
+            $linea     = $e->getLine();
+            $errorCode = $e->getCode() ?: 'N/A';
+            $errorType = get_class($e);
+
+            if ($platform === 'discord') {
+                $discordSettings = is_array($settings->discord_settings)
+                    ? $settings->discord_settings
+                    : (json_decode($settings->discord_settings ?? '[]', true) ?: []);
+
+                $webhookUrl = trim((string) ($discordSettings['developer_errors'] ?? ''));
+                if (empty($webhookUrl)) {
+                    return false;
+                }
+
+                return $this->sendDiscordDeveloperErrorMessage($webhookUrl, $mensaje, $archivo, $linea, $errorCode, $errorType, $url, $settings);
+            }
+
+            if ($platform === 'telegram') {
+                $telegramSettings = is_array($settings->telegram_settings)
+                    ? $settings->telegram_settings
+                    : (json_decode($settings->telegram_settings ?? '[]', true) ?: []);
+
+                $botToken = trim((string) ($telegramSettings['bot_token'] ?? ''));
+                $chatId   = trim((string) ($telegramSettings['developer_errors'] ?? ''));
+
+                if (empty($botToken) || empty($chatId)) {
+                    return false;
+                }
+
+                return $this->sendTelegramDeveloperErrorMessage($botToken, $chatId, $mensaje, $archivo, $linea, $errorCode, $errorType, $url, $settings);
+            }
+
+            return false;
+        } catch (\Throwable $err) {
+            Log::error("NotificationService [sendDeveloperErrorAlert] Error al procesar alerta: " . $err->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Envía el mensaje de error crítico para desarrollador a Discord.
+     */
+    protected function sendDiscordDeveloperErrorMessage(
+        string $webhookUrl,
+        string $mensaje,
+        string $archivo,
+        int $linea,
+        mixed $errorCode,
+        string $errorType,
+        string $url,
+        RestaurantSetting $settings
+    ): bool {
+        if (empty($webhookUrl)) {
+            return false;
+        }
+
+        $restaurantName = $settings->restaurant_name ?? 'Restaurante';
+
+        $codeBlock = "```text\n"
+            . "URL:     {$url}\n"
+            . "Tipo:    {$errorType}\n"
+            . "Código:  {$errorCode}\n"
+            . "Archivo: {$archivo}\n"
+            . "Línea:   {$linea}\n"
+            . "Error:   {$mensaje}\n"
+            . "```";
+
+        $content = "🚨 **CRITICAL ERROR DETECTADO** 🚨\n" . $codeBlock;
+
+        $payload = [
+            'username' => "{$restaurantName} • Dev Monitor",
+            'content'  => $content,
+            'embeds'   => [
+                [
+                    'title'       => "🚨 CRITICAL ERROR DETECTADO",
+                    'description' => "**URL:** `{$url}`",
+                    'color'       => 0xEF4444, // Rojo
+                    'fields'      => [
+                        ['name' => '💥 Error', 'value' => "```text\n{$mensaje}\n```", 'inline' => false],
+                        ['name' => '📁 Archivo', 'value' => "`{$archivo}`", 'inline' => false],
+                        ['name' => '📍 Línea', 'value' => (string) $linea, 'inline' => true],
+                        ['name' => '🔢 Código', 'value' => (string) $errorCode, 'inline' => true],
+                        ['name' => '🏷️ Tipo', 'value' => "`{$errorType}`", 'inline' => true],
+                    ],
+                    'footer'      => [
+                        'text' => "Monitor de Errores en Vivo • {$restaurantName}",
+                    ],
+                    'timestamp'   => now()->toISOString(),
+                ],
+            ],
+        ];
+
+        $response = Http::timeout(5)->post($webhookUrl, $payload);
+        if ($response->failed()) {
+            Log::warning("NotificationService Discord Dev Error alert falló ({$response->status()}): " . $response->body());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Envía el mensaje de error crítico para desarrollador a Telegram.
+     */
+    protected function sendTelegramDeveloperErrorMessage(
+        string $botToken,
+        string $chatId,
+        string $mensaje,
+        string $archivo,
+        int $linea,
+        mixed $errorCode,
+        string $errorType,
+        string $url,
+        RestaurantSetting $settings
+    ): bool {
+        if (empty($botToken) || empty($chatId)) {
+            return false;
+        }
+
+        $restaurantName = htmlspecialchars($settings->restaurant_name ?? 'Restaurante', ENT_QUOTES);
+        $escapedUrl     = htmlspecialchars($url, ENT_QUOTES);
+        $escapedMsg     = htmlspecialchars($mensaje, ENT_QUOTES);
+        $escapedFile    = htmlspecialchars($archivo, ENT_QUOTES);
+        $escapedType    = htmlspecialchars($errorType, ENT_QUOTES);
+
+        $text = "🚨 <b>CRITICAL ERROR DETECTADO</b> 🚨\n";
+        $text .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $text .= "🌐 <b>URL:</b> <code>{$escapedUrl}</code>\n";
+        $text .= "💥 <b>Tipo:</b> <code>{$escapedType}</code>\n";
+        $text .= "📁 <b>Archivo:</b> <code>{$escapedFile}</code>\n";
+        $text .= "📍 <b>Línea:</b> <code>{$linea}</code> | <b>Código:</b> <code>{$errorCode}</code>\n";
+        $text .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $text .= "⚠️ <b>Error:</b>\n<pre>{$escapedMsg}</pre>\n";
+        $text .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $text .= "<i>{$restaurantName} • Monitor de Errores Dev</i>";
+
+        $apiUrl = "https://api.telegram.org/bot{$botToken}/sendMessage";
+        $response = Http::timeout(5)->post($apiUrl, [
+            'chat_id'    => $chatId,
+            'text'       => $text,
+            'parse_mode' => 'HTML',
+        ]);
+
+        if ($response->failed()) {
+            Log::warning("NotificationService Telegram Dev Error alert falló ({$response->status()}): " . $response->body());
+            return false;
+        }
+
+        return true;
+    }
 }

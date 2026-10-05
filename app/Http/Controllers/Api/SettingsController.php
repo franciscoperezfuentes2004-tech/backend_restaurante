@@ -397,6 +397,7 @@ class SettingsController extends Controller
             'cash_cuts'                => $discordSettings['cash_cuts'] ?? '',
             'general_admin'            => $discordSettings['general_admin'] ?? '',
             'daily_financial_report'   => $discordSettings['daily_financial_report'] ?? '',
+            'developer_errors'         => $discordSettings['developer_errors'] ?? '',
             'reservations_webhook_url' => $discordSettings['reservations'] ?? $discordSettings['reservations_webhook_url'] ?? '',
         ];
         $data['discordSettings'] = $data['discord_settings'];
@@ -409,6 +410,7 @@ class SettingsController extends Controller
             'cash_cuts'              => $telegramSettings['cash_cuts'] ?? '',
             'general_admin'          => $telegramSettings['general_admin'] ?? '',
             'daily_financial_report' => $telegramSettings['daily_financial_report'] ?? '',
+            'developer_errors'       => $telegramSettings['developer_errors'] ?? '',
             'reservations_chat_id'   => $telegramSettings['reservations'] ?? $telegramSettings['reservations_chat_id'] ?? '',
         ];
         $data['telegramSettings'] = $data['telegram_settings'];
@@ -559,6 +561,8 @@ class SettingsController extends Controller
             'discord_settings.general_admin'            => 'nullable|string|max:500',
             'discord_settings.daily_financial_report'   => 'nullable|url',
             'discordSettings.daily_financial_report'    => 'nullable|url',
+            'discord_settings.developer_errors'         => 'nullable|url',
+            'discordSettings.developer_errors'          => 'nullable|url',
             'telegram_settings'                         => 'nullable|array',
             'telegramSettings'                          => 'nullable|array',
             'telegram_settings.bot_token'               => 'nullable|string|max:255',
@@ -569,6 +573,8 @@ class SettingsController extends Controller
             'telegram_settings.general_admin'           => 'nullable|string|max:255',
             'telegram_settings.daily_financial_report'  => 'nullable|string',
             'telegramSettings.daily_financial_report'   => 'nullable|string',
+            'telegram_settings.developer_errors'        => 'nullable|string',
+            'telegramSettings.developer_errors'         => 'nullable|string',
 
             // Delivery & Operaciones
             'delivery_fee'           => 'nullable|numeric|min:0',
@@ -835,6 +841,7 @@ class SettingsController extends Controller
                 'cash_cuts'              => $ds['cash_cuts'] ?? null,
                 'general_admin'          => $ds['general_admin'] ?? null,
                 'daily_financial_report' => $ds['daily_financial_report'] ?? null,
+                'developer_errors'       => $ds['developer_errors'] ?? null,
             ];
         }
 
@@ -851,6 +858,7 @@ class SettingsController extends Controller
                 'cash_cuts'              => $ts['cash_cuts'] ?? null,
                 'general_admin'          => $ts['general_admin'] ?? null,
                 'daily_financial_report' => $ts['daily_financial_report'] ?? null,
+                'developer_errors'       => $ts['developer_errors'] ?? null,
             ];
         }
 
