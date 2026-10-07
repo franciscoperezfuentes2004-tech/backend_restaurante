@@ -90,19 +90,7 @@ class UpdateUserRequest extends FormRequest
             // ── Rol del usuario ────────────────────────────────────────────
             'role'        => 'sometimes|required|string|exists:roles,name',
 
-            // ── Contraseña de alta seguridad (Password rule) ───────────────
-            'password'    => [
-                'sometimes',
-                'nullable',
-                'string',
-                'not_regex:/\s/', // Sin espacios
-                Password::min(8)
-                    ->letters()       // Requiere al menos una letra
-                    ->mixedCase()     // Requiere mayúsculas y minúsculas
-                    ->numbers()       // Requiere números
-                    ->symbols()       // Requiere símbolos especiales
-                    ->uncompromised(), // Revisa si ha sido filtrada (HaveIBeenPwned API)
-            ],
+
             'is_active'   => 'nullable|boolean',
             'branch_id'   => 'nullable|integer',
             'branch_name' => 'nullable|string|max:100',
@@ -130,14 +118,7 @@ class UpdateUserRequest extends FormRequest
             'role.required'           => 'El rol de usuario es obligatorio.',
             'role.string'             => 'El rol de usuario debe ser una cadena de texto.',
             'role.exists'             => 'El rol seleccionado no es válido.',
-            'password.string'         => 'La contraseña debe ser una cadena de texto.',
-            'password.not_regex'      => 'La contraseña no debe contener espacios en blanco.',
-            'password.min'            => 'La contraseña debe tener al menos 8 caracteres.',
-            'password.letters'        => 'La contraseña debe contener al menos una letra.',
-            'password.mixed'          => 'La contraseña debe contener al menos una letra mayúscula y una minúscula.',
-            'password.numbers'        => 'La contraseña debe contener al menos un número.',
-            'password.symbols'        => 'La contraseña debe contener al menos un carácter especial o símbolo.',
-            'password.uncompromised'  => 'La contraseña proporcionada ha aparecido en una filtración de datos en internet. Por seguridad, elija una contraseña diferente.',
+
             'avatar.image'            => 'El archivo debe ser una imagen válida.',
             'avatar.mimes'            => 'Solo se permiten imágenes en formato JPG, PNG o WEBP.',
             'avatar.max'              => 'La imagen no debe pesar más de 10MB.',

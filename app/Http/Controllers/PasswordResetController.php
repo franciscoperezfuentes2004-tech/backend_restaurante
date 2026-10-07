@@ -3,14 +3,173 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class PasswordResetController extends Controller
 {
+    /**
+     * POST /api/password/forgot
+     * Genera código OTP de 6 dígitos con caducidad de 2 minutos y dispara webhook n8n.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ], [
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email'    => 'Ingrese un correo electrónico válido.',
+        ]);
+
+        $email = strtolower(trim($request->email));
+        $user = User::where('email', $email)->first();
+
+        // Generar código numérico aleatorio de 6 dígitos
+        $code = sprintf('%06d', random_int(0, 999999));
+
+        if ($user) {
+            $expiresAt = now()->addMinutes(2);
+
+            // Guardar en tabla password_resets con caducidad estricta de 2 minutos
+            DB::table('password_resets')->updateOrInsert(
+                ['email' => $email],
+                [
+                    'code'       => $code,
+                    'token'      => $code,
+                    'expires_at' => $expiresAt,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+
+            // Sincronizar en password_reset_tokens
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $email],
+                [
+                    'token'      => $code,
+                    'created_at' => now(),
+                ]
+            );
+
+            // Enviar webhook n8n {"email": "...", "name": "...", "code": "..."} sin bloquear hilo
+            try {
+                $n8nUrl = env('N8N_WEBHOOK_PASSWORD') ?: (rtrim(env('N8N_URL', 'http://localhost:5678'), '/') . '/webhook/recuperar-password');
+                Http::timeout(3)->post($n8nUrl, [
+                    'email' => $user->email,
+                    'name'  => $user->name,
+                    'code'  => $code,
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Error disparando webhook de n8n para recuperación de contraseña: ' . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'status'     => 'success',
+            'message'    => 'Si el correo está registrado, se ha enviado un código de verificación de 6 dígitos.',
+            'code_debug' => app()->environment('local', 'testing') && $user ? $code : null,
+        ], 200);
+    }
+
+    /**
+     * POST /api/password/reset
+     * Verifica el código de 6 dígitos y caducidad, encripta y actualiza contraseña.
+     */
+    public function resetPassword(Request $request)
+    {
+        $hasNewPassword = $request->has('new_password');
+
+        $rules = [
+            'email' => 'required|email',
+            'code'  => 'required|string',
+        ];
+
+        if ($hasNewPassword) {
+            $rules['new_password']              = 'required|string|min:8|confirmed';
+            $rules['new_password_confirmation'] = 'required|string';
+            $passwordToSet                      = $request->new_password;
+        } else {
+            $rules['password']              = 'required|string|min:8|confirmed';
+            $rules['password_confirmation'] = 'required|string';
+            $passwordToSet                  = $request->password;
+        }
+
+        $request->validate($rules, [
+            'email.required'          => 'El correo electrónico es obligatorio.',
+            'email.email'             => 'Ingrese un correo electrónico válido.',
+            'code.required'           => 'El código de 6 dígitos es obligatorio.',
+            'new_password.required'   => 'La nueva contraseña es obligatoria.',
+            'new_password.min'        => 'La nueva contraseña debe tener al menos 8 caracteres.',
+            'new_password.confirmed'  => 'La confirmación de la contraseña no coincide.',
+            'password.required'       => 'La contraseña es obligatoria.',
+            'password.min'            => 'La contraseña debe tener al menos 8 caracteres.',
+            'password.confirmed'      => 'La confirmación de la contraseña no coincide.',
+        ]);
+
+        $email     = strtolower(trim($request->email));
+        $inputCode = trim((string) $request->code);
+
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response()->json([
+                'message' => 'No se encontró una cuenta asociada a este correo electrónico.'
+            ], 404);
+        }
+
+        $record = DB::table('password_resets')->where('email', $email)->first();
+        if (!$record) {
+            $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+        }
+
+        if (!$record) {
+            return response()->json([
+                'message' => 'No hay ninguna solicitud de recuperación pendiente para este correo.'
+            ], 422);
+        }
+
+        $savedCode = (string) ($record->code ?? $record->token);
+        if ($savedCode !== $inputCode) {
+            return response()->json([
+                'message' => 'El código de verificación de 6 dígitos es incorrecto.'
+            ], 422);
+        }
+
+        // Validar caducidad de 2 minutos
+        $isExpired = false;
+        if (!empty($record->expires_at)) {
+            $isExpired = Carbon::parse($record->expires_at)->isPast();
+        } elseif (!empty($record->created_at)) {
+            $isExpired = Carbon::parse($record->created_at)->addMinutes(2)->isPast();
+        }
+
+        if ($isExpired) {
+            DB::table('password_resets')->where('email', $email)->delete();
+            DB::table('password_reset_tokens')->where('email', $email)->delete();
+            return response()->json([
+                'message' => 'El código de verificación ha expirado (límite de 2 minutos). Por favor solicita uno nuevo.'
+            ], 422);
+        }
+
+        // Actualizar contraseña del usuario
+        $user->update([
+            'password'             => Hash::make($passwordToSet),
+            'must_change_password' => false,
+        ]);
+
+        // Eliminar código usado
+        DB::table('password_resets')->where('email', $email)->delete();
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Contraseña restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.'
+        ], 200);
+    }
     public function enviarRecuperacion(Request $request)
     {
         // 1. Validas que el correo exista en tu base de datos de PostgreSQL

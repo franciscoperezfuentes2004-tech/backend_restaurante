@@ -293,9 +293,6 @@ class UserController extends Controller
         if (isset($validated['role'])) {
             $updateData['role'] = $validated['role'];
         }
-        if (isset($validated['password']) && !empty($validated['password'])) {
-            $updateData['password'] = Hash::make($validated['password']);
-        }
         if (isset($validated['is_active'])) {
             $updateData['is_active'] = (bool) $validated['is_active'];
         }
@@ -377,58 +374,20 @@ class UserController extends Controller
 
     /**
      * PATCH /api/admin/usuarios/{id}/reset-password
-     * Restablece la contraseña. Accesible solo para admin y super_admin.
+     * Dispara el flujo autónomo enviando el código OTP de verificación al correo del usuario.
      */
     public function resetPassword(Request $request, $id)
     {
         $authUser = $request->user();
 
         if (!$authUser->hasAnyRole(['admin', 'super_admin'])) {
-            return response()->json(['message' => 'Solo los administradores pueden restablecer contraseñas.'], 403);
+            return response()->json(['message' => 'Solo los administradores pueden gestionar restablecimientos de contraseñas.'], 403);
         }
 
         $targetUser = User::findOrFail($id);
 
-        $newPassword = $request->input('password') ?? $request->input('new_password') ?? $request->input('contrasena');
+        AuditLogger::log('PASSWORD_RESET_TRIGGERED', 'Usuarios', "Solicitud de restablecimiento autónomo para usuario '{$targetUser->name}' ({$targetUser->email}) disparada por {$authUser->name}", $authUser, 'info');
 
-        $validator = Validator::make([
-            'password' => $newPassword
-        ], [
-            'password' => [
-                'required',
-                'string',
-                'not_regex:/\s/',
-                Password::min(8)
-                    ->letters()
-                    ->mixedCase()
-                    ->numbers()
-                    ->symbols()
-                    ->uncompromised(),
-            ],
-        ], [
-            'password.required'       => 'La nueva contraseña es obligatoria.',
-            'password.string'         => 'La contraseña debe ser una cadena de texto.',
-            'password.not_regex'      => 'La contraseña no debe contener espacios en blanco.',
-            'password.min'            => 'La contraseña debe tener al menos 8 caracteres.',
-            'password.letters'        => 'La contraseña debe contener al menos una letra.',
-            'password.mixed'          => 'La contraseña debe contener al menos una letra mayúscula y una minúscula.',
-            'password.numbers'        => 'La contraseña debe contener al menos un número.',
-            'password.symbols'        => 'La contraseña debe contener al menos un carácter especial o símbolo.',
-            'password.uncompromised'  => 'La contraseña proporcionada ha aparecido en una filtración de datos en internet. Por seguridad, elija una contraseña diferente.',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => $validator->errors()->first(),
-                'errors'  => $validator->errors()
-            ], 422);
-        }
-
-        $targetUser->password = Hash::make($newPassword);
-        $targetUser->save();
-
-        AuditLogger::log('PASSWORD_RESET', 'Usuarios', "Contraseña del usuario '{$targetUser->name}' restablecida por {$authUser->name}", $authUser, 'warning');
-
-        return response()->json(['message' => "Contraseña del usuario '{$targetUser->name}' restablecida exitosamente."]);
+        return app(\App\Http\Controllers\PasswordResetController::class)->forgotPassword(new Request(['email' => $targetUser->email]));
     }
 }

@@ -112,5 +112,137 @@ class PasswordResetWebhookTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['email']);
     }
+
+    public function test_forgot_password_generates_6_digit_otp_and_dispatches_n8n_webhook(): void
+    {
+        Http::fake([
+            '*' => Http::response(['status' => 'success'], 200),
+        ]);
+
+        $user = User::factory()->create([
+            'name'  => 'Carlos Chef',
+            'email' => 'carlos@aurum.com',
+        ]);
+
+        $response = $this->postJson('/api/password/forgot', [
+            'email' => 'carlos@aurum.com',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'status' => 'success',
+        ]);
+
+        $this->assertDatabaseHas('password_resets', [
+            'email' => 'carlos@aurum.com',
+        ]);
+
+        $record = \Illuminate\Support\Facades\DB::table('password_resets')->where('email', 'carlos@aurum.com')->first();
+        $this->assertNotNull($record);
+        $this->assertEquals(6, strlen($record->code));
+        $this->assertTrue(is_numeric($record->code));
+
+        Http::assertSent(function ($request) use ($user, $record) {
+            return $request['email'] === $user->email
+                && $request['name'] === $user->name
+                && $request['code'] === $record->code;
+        });
+    }
+
+    public function test_reset_password_with_valid_otp_updates_user_password_and_cleans_db(): void
+    {
+        Http::fake([
+            '*' => Http::response(['status' => 'success'], 200),
+        ]);
+
+        $user = User::factory()->create([
+            'name'                 => 'Laura Mesera',
+            'email'                => 'laura@aurum.com',
+            'password'             => \Illuminate\Support\Facades\Hash::make('OldPassword123!'),
+            'must_change_password' => true,
+        ]);
+
+        $this->postJson('/api/password/forgot', ['email' => 'laura@aurum.com']);
+
+        $record = \Illuminate\Support\Facades\DB::table('password_resets')->where('email', 'laura@aurum.com')->first();
+        $this->assertNotNull($record);
+
+        $response = $this->postJson('/api/password/reset', [
+            'email'                     => 'laura@aurum.com',
+            'code'                      => $record->code,
+            'new_password'              => 'NuevaPasswordSegura2026!',
+            'new_password_confirmation' => 'NuevaPasswordSegura2026!',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'status' => 'success',
+        ]);
+
+        $user->refresh();
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NuevaPasswordSegura2026!', $user->password));
+        $this->assertFalse($user->must_change_password);
+
+        // Verifica que el código se haya eliminado de la base de datos
+        $this->assertDatabaseMissing('password_resets', [
+            'email' => 'laura@aurum.com',
+        ]);
+    }
+
+    public function test_reset_password_fails_with_expired_otp(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'expirado@aurum.com',
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('password_resets')->insert([
+            'email'      => 'expirado@aurum.com',
+            'code'       => '123456',
+            'token'      => '123456',
+            'expires_at' => now()->subMinute(),
+            'created_at' => now()->subMinutes(3),
+            'updated_at' => now()->subMinutes(3),
+        ]);
+
+        $response = $this->postJson('/api/password/reset', [
+            'email'                     => 'expirado@aurum.com',
+            'code'                      => '123456',
+            'new_password'              => 'NuevaPasswordSegura2026!',
+            'new_password_confirmation' => 'NuevaPasswordSegura2026!',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonFragment([
+            'message' => 'El código de verificación ha expirado (límite de 2 minutos). Por favor solicita uno nuevo.',
+        ]);
+    }
+
+    public function test_reset_password_fails_with_invalid_code(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'invalido@aurum.com',
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('password_resets')->insert([
+            'email'      => 'invalido@aurum.com',
+            'code'       => '654321',
+            'token'      => '654321',
+            'expires_at' => now()->addMinutes(2),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/password/reset', [
+            'email'                     => 'invalido@aurum.com',
+            'code'                      => '999999',
+            'new_password'              => 'NuevaPasswordSegura2026!',
+            'new_password_confirmation' => 'NuevaPasswordSegura2026!',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonFragment([
+            'message' => 'El código de verificación de 6 dígitos es incorrecto.',
+        ]);
+    }
 }
 
