@@ -143,6 +143,71 @@ class PasswordResetController extends Controller
     }
 
     /**
+     * POST /api/password/verify-code
+     * Valida el código OTP de 6 dígitos antes de permitir el cambio de contraseña.
+     */
+    public function verifyCode(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'code'  => 'required|string',
+        ], [
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email'    => 'Ingrese un correo electrónico válido.',
+            'code.required'  => 'El código de 6 dígitos es obligatorio.',
+        ]);
+
+        $email     = strtolower(trim($request->email));
+        $inputCode = trim((string) $request->code);
+
+        $record = null;
+        if (Schema::hasTable('password_resets')) {
+            $record = DB::table('password_resets')->where('email', $email)->first();
+        }
+        if (!$record && Schema::hasTable('password_reset_tokens')) {
+            $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+        }
+
+        if (!$record) {
+            return response()->json([
+                'message' => 'Por favor verifique bien el código porque está mal escrito o ha expirado.',
+            ], 422);
+        }
+
+        $savedCode = (string) ($record->code ?? $record->token);
+        if ($savedCode !== $inputCode) {
+            return response()->json([
+                'message' => 'Por favor verifique bien el código porque está mal escrito o ha expirado.',
+            ], 422);
+        }
+
+        // Validar caducidad de 2 minutos
+        $isExpired = false;
+        if (!empty($record->expires_at)) {
+            $isExpired = Carbon::parse($record->expires_at)->isPast();
+        } elseif (!empty($record->created_at)) {
+            $isExpired = Carbon::parse($record->created_at)->addMinutes(2)->isPast();
+        }
+
+        if ($isExpired) {
+            if (Schema::hasTable('password_resets')) {
+                DB::table('password_resets')->where('email', $email)->delete();
+            }
+            if (Schema::hasTable('password_reset_tokens')) {
+                DB::table('password_reset_tokens')->where('email', $email)->delete();
+            }
+            return response()->json([
+                'message' => 'Por favor verifique bien el código porque está mal escrito o ha expirado.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Código verificado correctamente',
+        ], 200);
+    }
+
+    /**
      * POST /api/password/reset
      * Verifica el código de 6 dígitos y caducidad, encripta y actualiza contraseña.
      */

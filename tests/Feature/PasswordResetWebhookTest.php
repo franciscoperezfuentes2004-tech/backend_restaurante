@@ -330,5 +330,59 @@ class PasswordResetWebhookTest extends TestCase
             'message' => 'El código de verificación de 6 dígitos es incorrecto.',
         ]);
     }
+
+    public function test_verify_code_succeeds_with_valid_otp(): void
+    {
+        \Illuminate\Support\Facades\DB::table('password_resets')->insert([
+            'email'      => 'verify_valid@aurum.com',
+            'code'       => '123456',
+            'token'      => '123456',
+            'expires_at' => now()->addMinutes(2),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/password/verify-code', [
+            'email' => 'verify_valid@aurum.com',
+            'code'  => '123456',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'message' => 'Código verificado correctamente',
+        ]);
+    }
+
+    public function test_verify_code_fails_with_invalid_or_expired_code(): void
+    {
+        \Illuminate\Support\Facades\DB::table('password_resets')->insert([
+            'email'      => 'verify_invalid@aurum.com',
+            'code'       => '111222',
+            'token'      => '111222',
+            'expires_at' => now()->subMinute(),
+            'created_at' => now()->subMinutes(3),
+            'updated_at' => now()->subMinutes(3),
+        ]);
+
+        // Código erróneo
+        $res1 = $this->postJson('/api/password/verify-code', [
+            'email' => 'verify_invalid@aurum.com',
+            'code'  => '999999',
+        ]);
+        $res1->assertStatus(422);
+        $res1->assertJson([
+            'message' => 'Por favor verifique bien el código porque está mal escrito o ha expirado.',
+        ]);
+
+        // Código expirado
+        $res2 = $this->postJson('/api/password/verify-code', [
+            'email' => 'verify_invalid@aurum.com',
+            'code'  => '111222',
+        ]);
+        $res2->assertStatus(422);
+        $res2->assertJson([
+            'message' => 'Por favor verifique bien el código porque está mal escrito o ha expirado.',
+        ]);
+    }
 }
 
