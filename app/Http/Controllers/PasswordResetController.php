@@ -19,6 +19,11 @@ class PasswordResetController extends Controller
      */
     public function forgotPassword(Request $request)
     {
+        // 1. Validación de Honeypot (Trampa para bots)
+        if ($request->filled('website_url') || $request->filled('phone_ext') || !empty($request->input('website_url')) || !empty($request->input('phone_ext'))) {
+            return response()->json(['message' => 'Acceso denegado.'], 403);
+        }
+
         $request->validate([
             'email' => 'required|email',
         ], [
@@ -29,10 +34,38 @@ class PasswordResetController extends Controller
         $email = strtolower(trim($request->email));
         $user = User::where('email', $email)->first();
 
-        if (!$user) {
+        // 2. Verificación de Estado (Active Check) y Registro de Auditoría (Logging)
+        $isInactive = false;
+        if ($user) {
+            if (isset($user->is_active) && !$user->is_active) {
+                $isInactive = true;
+            }
+            if (isset($user->status) && in_array(strtolower($user->status), ['inactivo', 'suspendido', 'disabled'])) {
+                $isInactive = true;
+            }
+        }
+
+        if (!$user || $isInactive) {
+            \Log::warning('Intento de recuperación fallido. Correo no encontrado o inactivo.', [
+                'email' => $request->email,
+                'ip'    => $request->ip(),
+            ]);
+
             return response()->json([
                 'message' => 'Ese correo no está registrado a ningún usuario dentro del sistema',
             ], 404);
+        }
+
+        // 3. Cooldown de OTP (2 minutos)
+        $existingReset = DB::table('password_resets')
+            ->where('email', $email)
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if ($existingReset) {
+            return response()->json([
+                'message' => 'Ya enviamos un código a este correo. Por favor, espera 2 minutos antes de solicitar otro.',
+            ], 429);
         }
 
         // Generar código numérico aleatorio de 6 dígitos

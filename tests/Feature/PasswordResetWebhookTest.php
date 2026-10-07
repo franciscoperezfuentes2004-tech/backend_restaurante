@@ -161,6 +161,56 @@ class PasswordResetWebhookTest extends TestCase
         ]);
     }
 
+    public function test_forgot_password_aborts_with_403_when_honeypot_is_filled(): void
+    {
+        $response = $this->postJson('/api/password/forgot', [
+            'email'       => 'carlos@aurum.com',
+            'website_url' => 'https://spam-bot.com',
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    public function test_forgot_password_returns_404_when_user_is_inactive(): void
+    {
+        $inactiveUser = User::factory()->create([
+            'email'     => 'inactivo@aurum.com',
+            'is_active' => false,
+        ]);
+
+        $response = $this->postJson('/api/password/forgot', [
+            'email' => 'inactivo@aurum.com',
+        ]);
+
+        $response->assertStatus(404);
+        $response->assertJson([
+            'message' => 'Ese correo no está registrado a ningún usuario dentro del sistema',
+        ]);
+    }
+
+    public function test_forgot_password_returns_429_during_otp_cooldown(): void
+    {
+        Http::fake([
+            '*' => Http::response(['status' => 'success'], 200),
+        ]);
+
+        $user = User::factory()->create([
+            'email'     => 'cooldown@aurum.com',
+            'is_active' => true,
+        ]);
+
+        // Primera petición: éxito 200
+        $res1 = $this->postJson('/api/password/forgot', ['email' => 'cooldown@aurum.com']);
+        $res1->assertStatus(200);
+
+        // Segunda petición inmediata: rechazo 429 por cooldown de 2 minutos
+        $res2 = $this->postJson('/api/password/forgot', ['email' => 'cooldown@aurum.com']);
+        $res2->assertStatus(429);
+        $res2->assertJson([
+            'message' => 'Ya enviamos un código a este correo. Por favor, espera 2 minutos antes de solicitar otro.',
+        ]);
+    }
+
     public function test_forgot_password_handles_webhook_failure_gracefully(): void
     {
         Http::fake([
