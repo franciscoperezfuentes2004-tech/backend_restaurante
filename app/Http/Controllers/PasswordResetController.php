@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rules\Password;
 
 class PasswordResetController extends Controller
 {
@@ -220,26 +221,26 @@ class PasswordResetController extends Controller
             'code'  => 'required|string',
         ];
 
+        $passwordRule = ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()];
+
         if ($hasNewPassword) {
-            $rules['new_password']              = 'required|string|min:8|confirmed';
+            $rules['new_password']              = $passwordRule;
             $rules['new_password_confirmation'] = 'required|string';
             $passwordToSet                      = $request->new_password;
         } else {
-            $rules['password']              = 'required|string|min:8|confirmed';
+            $rules['password']              = $passwordRule;
             $rules['password_confirmation'] = 'required|string';
             $passwordToSet                  = $request->password;
         }
 
         $request->validate($rules, [
-            'email.required'          => 'El correo electrónico es obligatorio.',
-            'email.email'             => 'Ingrese un correo electrónico válido.',
-            'code.required'           => 'El código de 6 dígitos es obligatorio.',
-            'new_password.required'   => 'La nueva contraseña es obligatoria.',
-            'new_password.min'        => 'La nueva contraseña debe tener al menos 8 caracteres.',
-            'new_password.confirmed'  => 'La confirmación de la contraseña no coincide.',
-            'password.required'       => 'La contraseña es obligatoria.',
-            'password.min'            => 'La contraseña debe tener al menos 8 caracteres.',
-            'password.confirmed'      => 'La confirmación de la contraseña no coincide.',
+            'email.required'         => 'El correo electrónico es obligatorio.',
+            'email.email'            => 'Ingrese un correo electrónico válido.',
+            'code.required'          => 'El código de 6 dígitos es obligatorio.',
+            'new_password.required'  => 'La nueva contraseña es obligatoria.',
+            'new_password.confirmed' => 'La confirmación de la contraseña no coincide.',
+            'password.required'      => 'La contraseña es obligatoria.',
+            'password.confirmed'     => 'La confirmación de la contraseña no coincide.',
         ]);
 
         $email     = strtolower(trim($request->email));
@@ -371,10 +372,9 @@ class PasswordResetController extends Controller
 
     public function forceChange(Request $request)
     {
-        // 1. Validar que envíe la nueva contraseña y que sea segura
+        // 1. Validar que envíe la nueva contraseña y que sea segura (mayúsculas, minúsculas, números y símbolos)
         $request->validate([
-            'new_password' => 'required|string|min:8|confirmed', 
-            // "confirmed" exige que desde React envíen también "new_password_confirmation"
+            'new_password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()], 
         ]);
 
         // 2. Guardar la nueva contraseña y apagar la bandera

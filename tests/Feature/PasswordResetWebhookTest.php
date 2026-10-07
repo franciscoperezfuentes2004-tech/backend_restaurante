@@ -384,5 +384,51 @@ class PasswordResetWebhookTest extends TestCase
             'message' => 'Por favor verifique bien el código porque está mal escrito o ha expirado.',
         ]);
     }
+
+    public function test_reset_password_fails_if_password_does_not_meet_security_policy(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'seguridad@aurum.com',
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('password_resets')->insert([
+            'email'      => 'seguridad@aurum.com',
+            'code'       => '123456',
+            'token'      => '123456',
+            'expires_at' => now()->addMinutes(2),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Sin símbolos ni números
+        $res1 = $this->postJson('/api/password/reset', [
+            'email'                     => 'seguridad@aurum.com',
+            'code'                      => '123456',
+            'new_password'              => 'sololetrasgrandesychicas',
+            'new_password_confirmation' => 'sololetrasgrandesychicas',
+        ]);
+        $res1->assertStatus(422);
+        $res1->assertJsonValidationErrors(['new_password']);
+
+        // Sin símbolos
+        $res2 = $this->postJson('/api/password/reset', [
+            'email'                     => 'seguridad@aurum.com',
+            'code'                      => '123456',
+            'new_password'              => 'Password1234',
+            'new_password_confirmation' => 'Password1234',
+        ]);
+        $res2->assertStatus(422);
+        $res2->assertJsonValidationErrors(['new_password']);
+
+        // Sin números
+        $res3 = $this->postJson('/api/password/reset', [
+            'email'                     => 'seguridad@aurum.com',
+            'code'                      => '123456',
+            'new_password'              => 'Password!@#$',
+            'new_password_confirmation' => 'Password!@#$',
+        ]);
+        $res3->assertStatus(422);
+        $res3->assertJsonValidationErrors(['new_password']);
+    }
 }
 
