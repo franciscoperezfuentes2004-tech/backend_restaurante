@@ -9,10 +9,12 @@ use App\Models\User;
 use App\Models\UserPermission;
 use App\Services\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -192,20 +194,39 @@ class UserController extends Controller
             ], 403);
         }
 
-        $password = !empty($validated['password'])
-            ? Hash::make($validated['password'])
-            : Hash::make('Temporal123!');
+        // Generar contraseña segura aleatoria de 12 caracteres
+        $rawPassword = Str::password(12, true, true, true, false);
 
         $user = User::create([
-            'name'        => trim($validated['name']),
-            'phone'       => trim($validated['phone']),
-            'email'       => strtolower(trim($validated['email'])),
-            'role'        => $validated['role'],
-            'password'    => $password,
-            'is_active'   => $validated['is_active'] ?? true,
-            'branch_id'   => $validated['branch_id'] ?? ($authUser->branch_id ?? 1),
-            'branch_name' => $validated['branch_name'] ?? ($authUser->branch_name ?? 'Sucursal Centro'),
+            'name'                  => trim($validated['name']),
+            'phone'                 => trim($validated['phone']),
+            'email'                 => strtolower(trim($validated['email'])),
+            'role'                  => $validated['role'],
+            'password'              => Hash::make($rawPassword),
+            'must_change_password'  => true,
+            'is_active'             => $validated['is_active'] ?? true,
+            'branch_id'             => $validated['branch_id'] ?? ($authUser->branch_id ?? 1),
+            'branch_name'           => $validated['branch_name'] ?? ($authUser->branch_name ?? 'Sucursal Centro'),
         ]);
+
+        // Disparar webhook a n8n con credenciales generadas sin bloquear la respuesta
+        try {
+            $webhookUrl = env('N8N_NEW_USER_WEBHOOK_URL');
+            if ($webhookUrl) {
+                Http::timeout(5)->post($webhookUrl, [
+                    'email'    => $user->email,
+                    'phone'    => $user->phone,
+                    'role'     => $user->role,
+                    'password' => $rawPassword,
+                    'name'     => $user->name,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Fallo al despachar webhook de nuevo usuario a n8n: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'email'   => $user->email,
+            ]);
+        }
 
         AuditLogger::log('USER_CREATED', 'Usuarios', "Usuario '{$user->name}' ({$user->email}) creado con rol '{$user->role}' por {$authUser->name}", $authUser, 'info');
 
