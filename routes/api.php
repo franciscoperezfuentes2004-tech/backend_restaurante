@@ -2,6 +2,7 @@
 use App\Http\Middleware\EnsurePasswordIsChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DishController;
@@ -57,6 +58,17 @@ Route::post('/password/reset',        [PasswordResetController::class, 'resetPas
 Route::post('/password/reset-temp',   [PasswordResetController::class, 'generateTempPassword']);
 Route::post('/password/recuperar',    [PasswordResetController::class, 'enviarRecuperacion']);
 Route::post('/recuperar-password',    [PasswordResetController::class, 'enviarRecuperacion']);
+
+// Ruta temporal de prueba para mapear variables en n8n
+Route::get('/test-n8n', function () {
+    Http::post(env('N8N_WEBHOOK_URL'), [
+        'email' => 'cajero@restaurante.com',
+        'name'  => 'Juan Empleado',
+        'code'  => '123456',
+    ]);
+
+    return response()->json(['message' => 'Webhook enviado a n8n']);
+});
 
 // Rutas públicas del cliente (web pública)
 Route::prefix('public')->group(function () {
