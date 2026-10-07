@@ -130,7 +130,8 @@ class PasswordResetWebhookTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson([
-            'status' => 'success',
+            'status'  => 'success',
+            'message' => 'Si el correo existe, el código ha sido enviado',
         ]);
 
         $this->assertDatabaseHas('password_resets', [
@@ -147,6 +148,31 @@ class PasswordResetWebhookTest extends TestCase
                 && $request['name'] === $user->name
                 && $request['code'] === $record->code;
         });
+    }
+
+    public function test_forgot_password_handles_webhook_failure_gracefully(): void
+    {
+        Http::fake([
+            '*' => function () {
+                throw new \Exception('Conexión rehusada con el webhook de n8n');
+            },
+        ]);
+
+        $user = User::factory()->create([
+            'name'  => 'Fallo Webhook',
+            'email' => 'fallo_webhook@aurum.com',
+        ]);
+
+        $response = $this->postJson('/api/password/forgot', [
+            'email' => 'fallo_webhook@aurum.com',
+        ]);
+
+        // Retorna 200 OK informando que se ha enviado sin importar si el webhook falló
+        $response->assertStatus(200);
+        $response->assertJson([
+            'status'  => 'success',
+            'message' => 'Si el correo existe, el código ha sido enviado',
+        ]);
     }
 
     public function test_reset_password_with_valid_otp_updates_user_password_and_cleans_db(): void

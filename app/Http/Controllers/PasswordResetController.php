@@ -30,7 +30,7 @@ class PasswordResetController extends Controller
         $user = User::where('email', $email)->first();
 
         // Generar código numérico aleatorio de 6 dígitos
-        $code = sprintf('%06d', random_int(0, 999999));
+        $otpCode = sprintf('%06d', random_int(0, 999999));
 
         if ($user) {
             $expiresAt = now()->addMinutes(2);
@@ -39,8 +39,8 @@ class PasswordResetController extends Controller
             DB::table('password_resets')->updateOrInsert(
                 ['email' => $email],
                 [
-                    'code'       => $code,
-                    'token'      => $code,
+                    'code'       => $otpCode,
+                    'token'      => $otpCode,
                     'expires_at' => $expiresAt,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -51,28 +51,27 @@ class PasswordResetController extends Controller
             DB::table('password_reset_tokens')->updateOrInsert(
                 ['email' => $email],
                 [
-                    'token'      => $code,
+                    'token'      => $otpCode,
                     'created_at' => now(),
                 ]
             );
 
-            // Enviar webhook n8n {"email": "...", "name": "...", "code": "..."} sin bloquear hilo
             try {
-                $n8nUrl = env('N8N_WEBHOOK_PASSWORD') ?: (rtrim(env('N8N_URL', 'http://localhost:5678'), '/') . '/webhook/recuperar-password');
-                Http::timeout(3)->post($n8nUrl, [
+                Http::timeout(5)->post(env('N8N_WEBHOOK_URL'), [
                     'email' => $user->email,
-                    'name'  => $user->name,
-                    'code'  => $code,
+                    'name' => $user->name,
+                    'code' => $otpCode,
                 ]);
-            } catch (\Throwable $e) {
-                Log::error('Error disparando webhook de n8n para recuperación de contraseña: ' . $e->getMessage());
+            } catch (\Exception $e) {
+                \Log::error('Fallo al enviar: ' . $e->getMessage());
+                // Continuar la ejecución normal para no romper la respuesta al frontend
             }
         }
 
         return response()->json([
             'status'     => 'success',
-            'message'    => 'Si el correo está registrado, se ha enviado un código de verificación de 6 dígitos.',
-            'code_debug' => app()->environment('local', 'testing') && $user ? $code : null,
+            'message'    => 'Si el correo existe, el código ha sido enviado',
+            'code_debug' => app()->environment('local', 'testing') && $user ? $otpCode : null,
         ], 200);
     }
 
