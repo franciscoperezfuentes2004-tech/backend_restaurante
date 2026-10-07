@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class PasswordResetController extends Controller
 {
@@ -56,6 +57,18 @@ class PasswordResetController extends Controller
             ], 404);
         }
 
+        // Asegurar que la tabla password_resets exista para evitar fallos de migración
+        if (!Schema::hasTable('password_resets')) {
+            Schema::create('password_resets', function ($table) {
+                $table->id();
+                $table->string('email')->index();
+                $table->string('code', 10);
+                $table->string('token')->nullable();
+                $table->timestamp('expires_at')->nullable();
+                $table->timestamps();
+            });
+        }
+
         // 3. Cooldown de OTP (2 minutos)
         $existingReset = DB::table('password_resets')
             ->where('email', $email)
@@ -84,23 +97,41 @@ class PasswordResetController extends Controller
             ]
         );
 
-        // Sincronizar en password_reset_tokens
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $email],
-            [
+        // Sincronizar en password_reset_tokens si existe
+        if (Schema::hasTable('password_reset_tokens')) {
+            $dataToInsert = [
                 'token'      => $otpCode,
                 'created_at' => now(),
-            ]
-        );
+            ];
+            if (Schema::hasColumn('password_reset_tokens', 'code')) {
+                $dataToInsert['code'] = $otpCode;
+            }
+            if (Schema::hasColumn('password_reset_tokens', 'expires_at')) {
+                $dataToInsert['expires_at'] = $expiresAt;
+            }
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $email],
+                $dataToInsert
+            );
+        }
 
+        // Despacho del webhook de n8n encapsulado en try-catch robusto
         try {
-            Http::timeout(5)->post(env('N8N_WEBHOOK_URL'), [
-                'email' => $user->email,
-                'name'  => $user->name,
-                'code'  => $otpCode,
-            ]);
+            $webhookUrl = env('N8N_WEBHOOK_URL') ?: env('N8N_WEBHOOK_PASSWORD');
+            if (!empty($webhookUrl)) {
+                Http::timeout(5)->post($webhookUrl, [
+                    'email' => $user->email,
+                    'name'  => $user->name,
+                    'code'  => $otpCode,
+                ]);
+            } else {
+                \Log::warning('N8N_WEBHOOK_URL no configurado para envío de OTP.');
+            }
         } catch (\Exception $e) {
             \Log::error('Fallo al enviar: ' . $e->getMessage());
+            // Continuar la ejecución normal para no romper la respuesta al frontend
+        } catch (\Throwable $e) {
+            \Log::error('Fallo al enviar webhook n8n: ' . $e->getMessage());
             // Continuar la ejecución normal para no romper la respuesta al frontend
         }
 
@@ -156,8 +187,11 @@ class PasswordResetController extends Controller
             ], 404);
         }
 
-        $record = DB::table('password_resets')->where('email', $email)->first();
-        if (!$record) {
+        $record = null;
+        if (Schema::hasTable('password_resets')) {
+            $record = DB::table('password_resets')->where('email', $email)->first();
+        }
+        if (!$record && Schema::hasTable('password_reset_tokens')) {
             $record = DB::table('password_reset_tokens')->where('email', $email)->first();
         }
 
@@ -183,8 +217,12 @@ class PasswordResetController extends Controller
         }
 
         if ($isExpired) {
-            DB::table('password_resets')->where('email', $email)->delete();
-            DB::table('password_reset_tokens')->where('email', $email)->delete();
+            if (Schema::hasTable('password_resets')) {
+                DB::table('password_resets')->where('email', $email)->delete();
+            }
+            if (Schema::hasTable('password_reset_tokens')) {
+                DB::table('password_reset_tokens')->where('email', $email)->delete();
+            }
             return response()->json([
                 'message' => 'El código de verificación ha expirado (límite de 2 minutos). Por favor solicita uno nuevo.'
             ], 422);
@@ -197,8 +235,12 @@ class PasswordResetController extends Controller
         ]);
 
         // Eliminar código usado
-        DB::table('password_resets')->where('email', $email)->delete();
-        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        if (Schema::hasTable('password_resets')) {
+            DB::table('password_resets')->where('email', $email)->delete();
+        }
+        if (Schema::hasTable('password_reset_tokens')) {
+            DB::table('password_reset_tokens')->where('email', $email)->delete();
+        }
 
         return response()->json([
             'status'  => 'success',
