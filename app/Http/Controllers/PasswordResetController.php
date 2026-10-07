@@ -117,7 +117,7 @@ class PasswordResetController extends Controller
 
         // Despacho del webhook de n8n encapsulado en try-catch robusto
         try {
-            $webhookUrl = env('N8N_WEBHOOK_URL') ?: env('N8N_WEBHOOK_PASSWORD');
+            $webhookUrl = env('N8N_PASSWORD_WEBHOOK_URL') ?: env('N8N_WEBHOOK_URL') ?: env('N8N_WEBHOOK_PASSWORD');
             if (!empty($webhookUrl)) {
                 Http::timeout(5)->post($webhookUrl, [
                     'email' => $user->email,
@@ -125,7 +125,7 @@ class PasswordResetController extends Controller
                     'code'  => $otpCode,
                 ]);
             } else {
-                \Log::warning('N8N_WEBHOOK_URL no configurado para envío de OTP.');
+                \Log::warning('N8N_PASSWORD_WEBHOOK_URL no configurado para envío de OTP.');
             }
         } catch (\Exception $e) {
             \Log::error('Fallo al enviar: ' . $e->getMessage());

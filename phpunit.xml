@@ -34,6 +34,7 @@
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="N8N_URL" value="http://localhost:5678"/>
         <env name="N8N_WEBHOOK_URL" value="http://localhost/webhook/orders"/>
+        <env name="N8N_PASSWORD_WEBHOOK_URL" value="http://localhost/webhook/password"/>
         <env name="N8N_NEW_USER_WEBHOOK_URL" value="http://localhost:5678/webhook/nuevo-usuario"/>
         <env name="N8N_WEBHOOK_PASSWORD" value="http://localhost/webhook/password"/>
         <env name="N8N_WEBHOOK_RESERVATION" value="http://localhost/webhook/reservations"/>
