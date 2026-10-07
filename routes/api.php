@@ -53,7 +53,7 @@ Route::get('/statistics/experiences', [LandingController::class, 'getStatistics'
 Route::get('/reviews/landing',        [LandingController::class, 'getReviews']);
 Route::get('/landing/reviews',        [LandingController::class, 'getLandingReviews']);
 Route::get('/reviews/landing-reviews', [LandingController::class, 'getLandingReviews']);
-Route::post('/password/forgot',       [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
+Route::post('/password/forgot',       [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:3,1');
 Route::post('/password/reset',        [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
 Route::post('/password/reset-temp',   [PasswordResetController::class, 'generateTempPassword']);
 Route::post('/password/recuperar',    [PasswordResetController::class, 'enviarRecuperacion']);

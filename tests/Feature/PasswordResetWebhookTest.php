@@ -130,8 +130,7 @@ class PasswordResetWebhookTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson([
-            'status'  => 'success',
-            'message' => 'Si el correo existe, el código ha sido enviado',
+            'status' => 'success',
         ]);
 
         $this->assertDatabaseHas('password_resets', [
@@ -148,6 +147,18 @@ class PasswordResetWebhookTest extends TestCase
                 && $request['name'] === $user->name
                 && $request['code'] === $record->code;
         });
+    }
+
+    public function test_forgot_password_returns_404_when_user_does_not_exist(): void
+    {
+        $response = $this->postJson('/api/password/forgot', [
+            'email' => 'no_existe@aurum.com',
+        ]);
+
+        $response->assertStatus(404);
+        $response->assertJson([
+            'message' => 'Ese correo no está registrado a ningún usuario dentro del sistema',
+        ]);
     }
 
     public function test_forgot_password_handles_webhook_failure_gracefully(): void
@@ -170,8 +181,7 @@ class PasswordResetWebhookTest extends TestCase
         // Retorna 200 OK informando que se ha enviado sin importar si el webhook falló
         $response->assertStatus(200);
         $response->assertJson([
-            'status'  => 'success',
-            'message' => 'Si el correo existe, el código ha sido enviado',
+            'status' => 'success',
         ]);
     }
 

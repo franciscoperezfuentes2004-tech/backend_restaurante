@@ -29,49 +29,52 @@ class PasswordResetController extends Controller
         $email = strtolower(trim($request->email));
         $user = User::where('email', $email)->first();
 
+        if (!$user) {
+            return response()->json([
+                'message' => 'Ese correo no está registrado a ningún usuario dentro del sistema',
+            ], 404);
+        }
+
         // Generar código numérico aleatorio de 6 dígitos
         $otpCode = sprintf('%06d', random_int(0, 999999));
+        $expiresAt = now()->addMinutes(2);
 
-        if ($user) {
-            $expiresAt = now()->addMinutes(2);
+        // Guardar en tabla password_resets con caducidad estricta de 2 minutos
+        DB::table('password_resets')->updateOrInsert(
+            ['email' => $email],
+            [
+                'code'       => $otpCode,
+                'token'      => $otpCode,
+                'expires_at' => $expiresAt,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
 
-            // Guardar en tabla password_resets con caducidad estricta de 2 minutos
-            DB::table('password_resets')->updateOrInsert(
-                ['email' => $email],
-                [
-                    'code'       => $otpCode,
-                    'token'      => $otpCode,
-                    'expires_at' => $expiresAt,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]
-            );
+        // Sincronizar en password_reset_tokens
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            [
+                'token'      => $otpCode,
+                'created_at' => now(),
+            ]
+        );
 
-            // Sincronizar en password_reset_tokens
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $email],
-                [
-                    'token'      => $otpCode,
-                    'created_at' => now(),
-                ]
-            );
-
-            try {
-                Http::timeout(5)->post(env('N8N_WEBHOOK_URL'), [
-                    'email' => $user->email,
-                    'name' => $user->name,
-                    'code' => $otpCode,
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Fallo al enviar: ' . $e->getMessage());
-                // Continuar la ejecución normal para no romper la respuesta al frontend
-            }
+        try {
+            Http::timeout(5)->post(env('N8N_WEBHOOK_URL'), [
+                'email' => $user->email,
+                'name'  => $user->name,
+                'code'  => $otpCode,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Fallo al enviar: ' . $e->getMessage());
+            // Continuar la ejecución normal para no romper la respuesta al frontend
         }
 
         return response()->json([
             'status'     => 'success',
-            'message'    => 'Si el correo existe, el código ha sido enviado',
-            'code_debug' => app()->environment('local', 'testing') && $user ? $otpCode : null,
+            'message'    => 'Código de verificación enviado exitosamente.',
+            'code_debug' => app()->environment('local', 'testing') ? $otpCode : null,
         ], 200);
     }
 
