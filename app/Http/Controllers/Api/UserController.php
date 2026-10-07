@@ -194,8 +194,8 @@ class UserController extends Controller
             ], 403);
         }
 
-        // Generar contraseña segura aleatoria de 12 caracteres
-        $rawPassword = Str::password(12, true, true, true, false);
+        // Generar contraseña segura aleatoria de 10 caracteres
+        $rawPassword = Str::password(10, true, true, true, false);
 
         $user = User::create([
             'name'                  => trim($validated['name']),
