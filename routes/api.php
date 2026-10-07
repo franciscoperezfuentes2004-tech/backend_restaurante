@@ -59,38 +59,6 @@ Route::post('/password/reset-temp',   [PasswordResetController::class, 'generate
 Route::post('/password/recuperar',    [PasswordResetController::class, 'enviarRecuperacion']);
 Route::post('/recuperar-password',    [PasswordResetController::class, 'enviarRecuperacion']);
 
-// Ruta temporal de prueba para mapear variables en n8n
-Route::get('/test-n8n', function () {
-    $url = env('N8N_WEBHOOK_URL') ?: 'http://localhost:5678/webhook-test/e42d074b-d07e-4ea9-aab8-b6b695c960f1';
-
-    try {
-        $response = Http::timeout(5)->post($url, [
-            'email' => 'cajero@restaurante.com',
-            'name'  => 'Juan Empleado',
-            'code'  => '123456',
-        ]);
-
-        if ($response->status() === 404 && str_contains($url, '/webhook/')) {
-            $testUrl = str_replace('/webhook/', '/webhook-test/', $url);
-            $response = Http::timeout(5)->post($testUrl, [
-                'email' => 'cajero@restaurante.com',
-                'name'  => 'Juan Empleado',
-                'code'  => '123456',
-            ]);
-        }
-    } catch (\Throwable $e) {
-        return response()->json([
-            'status'  => 'error',
-            'message' => 'Error al conectar con n8n: ' . $e->getMessage(),
-        ], 500);
-    }
-
-    return response()->json([
-        'message'      => 'Webhook enviado a n8n',
-        'n8n_status'   => $response->status(),
-        'n8n_response' => $response->json() ?? $response->body(),
-    ]);
-});
 
 // Rutas públicas del cliente (web pública)
 Route::prefix('public')->group(function () {
