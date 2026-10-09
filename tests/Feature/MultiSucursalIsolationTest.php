@@ -148,12 +148,118 @@ class MultiSucursalIsolationTest extends TestCase
             'is_active'   => true,
         ]);
 
-        // Súper Administrador Global ve ambos platillos
+        // Súper Administrador Global ve ambos platillos sin header
         $this->actingAs($this->superAdmin);
         $allDishes = Dish::pluck('id')->toArray();
 
         $this->assertContains($dishA->id, $allDishes);
         $this->assertContains($dishB->id, $allDishes);
+    }
+
+    public function test_super_admin_filters_by_sucursal_when_x_sucursal_id_header_is_provided(): void
+    {
+        $catA = Category::create([
+            'sucursal_id' => $this->sucursalA->id,
+            'name'        => 'Cat A Super',
+            'slug'        => 'cat-a-super',
+            'active'      => true,
+        ]);
+
+        $dishA = Dish::create([
+            'category_id' => $catA->id,
+            'sucursal_id' => $this->sucursalA->id,
+            'name'        => 'Platillo A Super',
+            'slug'        => 'platillo-a-super',
+            'price'       => 100,
+            'is_active'   => true,
+        ]);
+
+        $dishB = Dish::create([
+            'category_id' => $catA->id,
+            'sucursal_id' => $this->sucursalB->id,
+            'name'        => 'Platillo B Super',
+            'slug'        => 'platillo-b-super',
+            'price'       => 200,
+            'is_active'   => true,
+        ]);
+
+        $this->actingAs($this->superAdmin);
+
+        // Sin contexto en app container: ve ambos
+        $all = Dish::pluck('id')->toArray();
+        $this->assertContains($dishA->id, $all);
+        $this->assertContains($dishB->id, $all);
+
+        // Simulando que el middleware inyectó X-Sucursal-ID = sucursalA->id
+        app()->instance('current_sucursal_id', $this->sucursalA->id);
+        $onlyA = Dish::pluck('id')->toArray();
+        $this->assertContains($dishA->id, $onlyA);
+        $this->assertNotContains($dishB->id, $onlyA);
+
+        // Simulando que el middleware inyectó X-Sucursal-ID = sucursalB->id
+        app()->instance('current_sucursal_id', $this->sucursalB->id);
+        $onlyB = Dish::pluck('id')->toArray();
+        $this->assertContains($dishB->id, $onlyB);
+        $this->assertNotContains($dishA->id, $onlyB);
+
+        // Limpiar contenedor para los siguientes tests
+        app()->forgetInstance('current_sucursal_id');
+    }
+
+    public function test_middleware_set_sucursal_context_injects_header_into_container(): void
+    {
+        $middleware = new \App\Http\Middleware\SetSucursalContext();
+        $request = \Illuminate\Http\Request::create('/api/test', 'GET');
+        $request->headers->set('X-Sucursal-ID', (string) $this->sucursalB->id);
+
+        $middleware->handle($request, function ($req) {
+            $this->assertTrue(app()->bound('current_sucursal_id'));
+            $this->assertEquals($this->sucursalB->id, app('current_sucursal_id'));
+            return response()->json(['ok' => true]);
+        });
+
+        app()->forgetInstance('current_sucursal_id');
+    }
+
+    public function test_ordinary_user_cannot_bypass_own_sucursal_with_foreign_header(): void
+    {
+        $catA = Category::create([
+            'sucursal_id' => $this->sucursalA->id,
+            'name'        => 'Cat A User',
+            'slug'        => 'cat-a-user',
+            'active'      => true,
+        ]);
+
+        $dishA = Dish::create([
+            'category_id' => $catA->id,
+            'sucursal_id' => $this->sucursalA->id,
+            'name'        => 'Platillo Propio A',
+            'slug'        => 'platillo-propio-a',
+            'price'       => 100,
+            'is_active'   => true,
+        ]);
+
+        $dishB = Dish::create([
+            'category_id' => $catA->id,
+            'sucursal_id' => $this->sucursalB->id,
+            'name'        => 'Platillo Ajeno B',
+            'slug'        => 'platillo-ajeno-b',
+            'price'       => 200,
+            'is_active'   => true,
+        ]);
+
+        // Usuario A autenticado (sucursalA)
+        $this->actingAs($this->userA);
+
+        // Intento de manipulación de encabezado hacia sucursalB
+        app()->instance('current_sucursal_id', $this->sucursalB->id);
+
+        $dishesSeen = Dish::pluck('id')->toArray();
+        // Debe mantenerse confinado a sucursalA por blindaje de seguridad
+        $this->assertContains($dishA->id, $dishesSeen);
+        $this->assertNotContains($dishB->id, $dishesSeen);
+
+        app()->forgetInstance('current_sucursal_id');
     }
 
     public function test_belongs_to_sucursal_trait_automatically_assigns_authenticated_user_sucursal_on_creation(): void

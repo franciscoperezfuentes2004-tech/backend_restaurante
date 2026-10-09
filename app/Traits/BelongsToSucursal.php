@@ -21,6 +21,14 @@ trait BelongsToSucursal
         static::creating(function ($model) {
             $hasExplicitSucursal = !empty($model->attributes['sucursal_id'] ?? null);
 
+            if (!$hasExplicitSucursal && app()->bound('current_sucursal_id')) {
+                $contextId = app('current_sucursal_id');
+                if (!empty($contextId)) {
+                    $model->sucursal_id = (int) $contextId;
+                    $hasExplicitSucursal = true;
+                }
+            }
+
             if (!$hasExplicitSucursal && auth()->check()) {
                 $user = auth()->user();
                 $userSucursalId = $user->attributes['sucursal_id'] ?? $user->sucursal_id ?? null;
