@@ -7,14 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 
 class Supplier extends Model
 {
-    use HasFactory, Auditable;
+    use HasFactory, Auditable, BelongsToSucursal;
 
     protected $table = 'suppliers';
 
     protected $fillable = [
+        'sucursal_id',
         'company_name',
         'contact_name',
         'specialty',
@@ -25,6 +27,7 @@ class Supplier extends Model
     ];
 
     protected $casts = [
+        'sucursal_id'   => 'integer',
         'delivery_days' => 'array',
         'active'        => 'boolean',
     ];

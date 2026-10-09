@@ -220,8 +220,14 @@ class AuthController extends Controller
                 'phone'       => $user->phone,
                 'role'        => $user->role,
                 'roles'       => [$user->role],
-                'branch_id'   => $user->branch_id ?? 1,
-                'branch_name' => $user->branch_name ?? 'Sucursal Centro',
+                'sucursal_id' => $user->sucursal_id ?? $user->branch_id ?? 1,
+                'branch_id'   => $user->sucursal_id ?? $user->branch_id ?? 1,
+                'branch_name' => $user->sucursal?->nombre ?? $user->branch_name ?? 'Sucursal Principal',
+                'sucursal'    => $user->sucursal ? [
+                    'id'     => $user->sucursal->id,
+                    'nombre' => $user->sucursal->nombre,
+                    'codigo' => $user->sucursal->codigo,
+                ] : null,
                 'permissions' => PermissionService::getPermissions($user->role),
             ],
         ]);
@@ -304,8 +310,14 @@ class AuthController extends Controller
             'phone'       => $user->phone,
             'role'        => $user->role,
             'roles'       => [$user->role],
-            'branch_id'   => $user->branch_id ?? 1,
-            'branch_name' => $user->branch_name ?? 'Sucursal Centro',
+            'sucursal_id' => $user->sucursal_id ?? $user->branch_id ?? 1,
+            'branch_id'   => $user->sucursal_id ?? $user->branch_id ?? 1,
+            'branch_name' => $user->sucursal?->nombre ?? $user->branch_name ?? 'Sucursal Principal',
+            'sucursal'    => $user->sucursal ? [
+                'id'     => $user->sucursal->id,
+                'nombre' => $user->sucursal->nombre,
+                'codigo' => $user->sucursal->codigo,
+            ] : null,
             'permissions' => PermissionService::getPermissions($user->role),
         ]);
     }

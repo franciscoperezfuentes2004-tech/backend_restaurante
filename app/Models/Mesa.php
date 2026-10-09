@@ -4,14 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToSucursal;
 
 class Mesa extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToSucursal;
 
     protected $table = 'mesas';
 
     protected $fillable = [
+        'sucursal_id',
         'area_id',
         'numero_mesa',
         'capacidad',
@@ -20,6 +22,7 @@ class Mesa extends Model
     ];
 
     protected $casts = [
+        'sucursal_id' => 'integer',
         'is_active'   => 'boolean',
         'numero_mesa' => 'integer',
         'capacidad'   => 'integer',

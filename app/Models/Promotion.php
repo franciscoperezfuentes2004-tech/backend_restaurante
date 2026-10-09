@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 
 class Promotion extends Model
 {
-    use Auditable;
+    use Auditable, BelongsToSucursal;
 
     protected $fillable = [
+        'sucursal_id',
         'name',
         'type',
         'scheme',
@@ -29,6 +31,7 @@ class Promotion extends Model
     ];
 
     protected $casts = [
+        'sucursal_id'     => 'integer',
         'products'        => 'array',
         'days'            => 'array',
         'active'          => 'boolean',

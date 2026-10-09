@@ -5,14 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BelongsToSucursal;
 
 class CashCut extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToSucursal;
 
     protected $table = 'cash_cuts';
 
     protected $fillable = [
+        'sucursal_id',
         'user_id',
         'cut_type',
         'cash_declared',
@@ -26,6 +28,7 @@ class CashCut extends Model
     ];
 
     protected $casts = [
+        'sucursal_id'   => 'integer',
         'cut_type'      => 'string',
         'cash_declared' => 'decimal:2',
         'expected_cash' => 'decimal:2',

@@ -2,10 +2,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\BelongsToSucursal;
 
 class Delivery extends Model
 {
-    protected $fillable = ['order_id', 'driver_id', 'delivery_zone_id', 'status'];
+    use BelongsToSucursal;
+
+    protected $fillable = ['sucursal_id', 'order_id', 'driver_id', 'delivery_zone_id', 'status'];
+
+    protected $casts = [
+        'sucursal_id' => 'integer',
+    ];
 
     public static function generarFolioUnico(): string
     {

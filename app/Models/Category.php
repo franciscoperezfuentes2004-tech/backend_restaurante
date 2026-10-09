@@ -3,18 +3,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 
 class Category extends Model
 {
-    use Auditable;
+    use Auditable, BelongsToSucursal;
 
     protected $fillable = [
-        'name', 'slug', 'description', 'image_url',
+        'sucursal_id', 'name', 'slug', 'description', 'image_url',
         'time_start', 'time_end', 'days', 'active', 'is_active',
         'limitar_dias', 'dias_disponibilidad'
     ];
 
     protected $casts = [
+        'sucursal_id'         => 'integer',
         'active'              => 'boolean',
         'limitar_dias'        => 'boolean',
         'days'                => 'array',

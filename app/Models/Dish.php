@@ -4,13 +4,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 
 class Dish extends Model
 {
-    use Auditable, SoftDeletes;
+    use Auditable, SoftDeletes, BelongsToSucursal;
 
     protected $fillable = [
-        'category_id', 'name', 'slug', 'description',
+        'category_id', 'sucursal_id', 'name', 'slug', 'description',
         'price', 'image_url', 'allergens', 'ingredients',
         'allow_extras', 'allow_observations', 'allow_spice_level',
         'is_available', 'is_active', 'is_sold_out', 'is_featured',
@@ -18,6 +19,7 @@ class Dish extends Model
     ];
 
     protected $casts = [
+        'sucursal_id'         => 'integer',
         'is_available'        => 'boolean',
         'is_active'           => 'boolean',
         'is_sold_out'         => 'boolean',

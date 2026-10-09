@@ -205,8 +205,8 @@ class UserController extends Controller
             'password'              => Hash::make($rawPassword),
             'must_change_password'  => true,
             'is_active'             => $validated['is_active'] ?? true,
-            'branch_id'             => $validated['branch_id'] ?? ($authUser->branch_id ?? 1),
-            'branch_name'           => $validated['branch_name'] ?? ($authUser->branch_name ?? 'Sucursal Centro'),
+            'branch_id'             => $authUser->sucursal_id ?? $authUser->branch_id ?? 1,
+            'branch_name'           => $authUser->sucursal?->nombre ?? $authUser->branch_name ?? 'Sucursal Centro',
         ]);
 
         // Disparar webhook a n8n con credenciales generadas sin bloquear la respuesta

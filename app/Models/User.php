@@ -14,13 +14,14 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 
-#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_active', 'last_login_at', 'branch_id', 'branch_name', 'using_default_credentials', 'must_change_password'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'role', 'is_active', 'last_login_at', 'branch_id', 'branch_name', 'sucursal_id', 'using_default_credentials', 'must_change_password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, Auditable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, Auditable, BelongsToSucursal;
 
     // Helpers para verificar rol fácilmente
     public function hasRole(string $role): bool
@@ -85,7 +86,13 @@ class User extends Authenticatable
             'using_default_credentials' => 'boolean',
             'must_change_password' => 'boolean',
             'password' => 'hashed',
+            'sucursal_id' => 'integer',
         ];
+    }
+
+    public function getBranchIdAttribute(): ?int
+    {
+        return $this->attributes['branch_id'] ?? $this->attributes['sucursal_id'] ?? null;
     }
 
     public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany

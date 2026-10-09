@@ -4,14 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\BelongsToSucursal;
 
 class Notification extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, BelongsToSucursal;
 
     protected $table = 'notifications';
 
     protected $fillable = [
+        'sucursal_id',
         'user_id',
         'type',
         'title',
@@ -21,7 +23,8 @@ class Notification extends Model
     ];
 
     protected $casts = [
-        'data'    => 'array',
+        'sucursal_id' => 'integer',
+        'data'        => 'array',
         'read_at' => 'datetime',
     ];
 

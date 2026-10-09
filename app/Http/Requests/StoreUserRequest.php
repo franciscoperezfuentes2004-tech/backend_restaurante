@@ -73,8 +73,6 @@ class StoreUserRequest extends FormRequest
             'role'        => 'required|string|exists:roles,name',
 
             'is_active'   => 'nullable|boolean',
-            'branch_id'   => 'nullable|integer',
-            'branch_name' => 'nullable|string|max:100',
             'avatar'      => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:10240',
             'imagen'      => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:10240',
             'foto'        => 'nullable|file|image|mimes:jpg,jpeg,png,webp|max:10240',

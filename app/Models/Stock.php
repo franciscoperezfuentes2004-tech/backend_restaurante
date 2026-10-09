@@ -7,14 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 
 class Stock extends Model
 {
-    use HasFactory, Auditable;
+    use HasFactory, Auditable, BelongsToSucursal;
 
     protected $table = 'stock';
 
     protected $fillable = [
+        'sucursal_id',
         'ingredient_id',
         'quantity',
         'min_quantity',
@@ -24,6 +26,7 @@ class Stock extends Model
     ];
 
     protected $casts = [
+        'sucursal_id'  => 'integer',
         'quantity'     => 'float',
         'min_quantity' => 'float',
         'expiry_date'  => 'date:Y-m-d',

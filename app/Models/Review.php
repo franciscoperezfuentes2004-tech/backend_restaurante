@@ -5,14 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 
 class Review extends Model
 {
-    use Auditable, SoftDeletes;
+    use Auditable, SoftDeletes, BelongsToSucursal;
 
     protected $table = 'reviews';
 
     protected $fillable = [
+        'sucursal_id',
         'dish_id',
         'folio',
         'nombre',
@@ -43,6 +45,7 @@ class Review extends Model
     ];
 
     protected $casts = [
+        'sucursal_id'     => 'integer',
         'fotos'           => 'array',
         'rating'          => 'integer',
         'is_approved'     => 'boolean',

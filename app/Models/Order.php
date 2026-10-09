@@ -3,19 +3,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class Order extends Model
 {
-    use Auditable;
+    use Auditable, BelongsToSucursal;
 
     protected $fillable = [
-        'folio', 'dispatch_token', 'daily_number', 'user_id', 'waiter_id', 'customer_name', 'customer_phone',
+        'sucursal_id', 'folio', 'dispatch_token', 'daily_number', 'user_id', 'waiter_id', 'customer_name', 'customer_phone',
         'customer_address', 'customer_email', 'table_id', 'table_number',
         'status', 'payment_status', 'payment_method',
         'total_amount', 'notes', 'modality'
+    ];
+
+    protected $casts = [
+        'sucursal_id' => 'integer',
     ];
 
     protected $attributes = [

@@ -5,17 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BelongsToSucursal;
 use RuntimeException;
 
 class AuditLog extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToSucursal;
 
     public $timestamps = false;
 
     protected $table = 'audit_logs';
 
     protected $fillable = [
+        'sucursal_id',
         'user_id',
         'user_name',
         'role',
@@ -29,9 +31,10 @@ class AuditLog extends Model
     ];
 
     protected $casts = [
-        'valores_antes' => 'array',
+        'sucursal_id'     => 'integer',
+        'valores_antes'   => 'array',
         'valores_despues' => 'array',
-        'created_at' => 'datetime:Y-m-d H:i:s',
+        'created_at'      => 'datetime:Y-m-d H:i:s',
     ];
 
     /**

@@ -3,15 +3,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\Auditable;
+use App\Traits\BelongsToSucursal;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class Reservation extends Model
 {
-    use Auditable;
+    use Auditable, BelongsToSucursal;
 
     protected $fillable = [
-        'nombre', 'telefono', 'email', 'fecha', 'hora', 'personas',
+        'sucursal_id', 'nombre', 'telefono', 'email', 'fecha', 'hora', 'personas',
         'zona_preferida', 'ocasion_especial', 'nota_especial', 'estado',
         'user_id', 'area_id', 'area', 'table_id', 'customer_name', 'customer_email',
         'customer_phone', 'reservation_date', 'reservation_time',
@@ -20,6 +21,7 @@ class Reservation extends Model
     ];
 
     protected $casts = [
+        'sucursal_id'  => 'integer',
         'personas'     => 'integer',
         'guests_count' => 'integer',
     ];
