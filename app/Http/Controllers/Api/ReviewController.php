@@ -810,7 +810,7 @@ class ReviewController extends Controller
     public function galeriaDiaria()
     {
         // El caché expirará automáticamente al final del día actual
-        $galeria = Cache::remember('galeria_premium_diaria', now()->endOfDay(), function () {
+        $galeria = Cache::tenant()->remember('galeria_premium_diaria', now()->endOfDay(), function () {
             // 1. Traer reseñas aleatorias de 4 o 5 estrellas que tengan fotos
             $reviews = Review::where('is_approved', true)
                 ->where('rating', '>=', 4)
@@ -871,7 +871,7 @@ class ReviewController extends Controller
     public function tarjetasDiarias()
     {
         // El caché guarda el resultado hasta la medianoche de hoy
-        $tarjetas = Cache::remember('tarjetas_landing_diarias', now()->endOfDay(), function () {
+        $tarjetas = Cache::tenant()->remember('tarjetas_landing_diarias', now()->endOfDay(), function () {
             // Trae hasta 10 reseñas aprobadas de 4 y 5 estrellas (únicas por su ID en la BD)
             $reviews = Review::where('is_approved', true)
                 ->where('rating', '>=', 4)

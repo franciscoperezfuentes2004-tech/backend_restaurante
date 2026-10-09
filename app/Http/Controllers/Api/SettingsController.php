@@ -1172,6 +1172,7 @@ class SettingsController extends Controller
         }
 
         // Destrucción de llaves de caché para forzar consulta limpia de base de datos
+        Cache::tenant()->flush();
         Cache::forget('landing_featured_dishes');
         Cache::forget('landing_settings');
         Cache::forget('restaurant_settings');
@@ -1482,6 +1483,7 @@ class SettingsController extends Controller
         );
 
         // Destrucción de llaves de caché
+        Cache::tenant()->flush();
         Cache::forget('landing_featured_dishes');
         Cache::forget('landing_settings');
         Cache::forget('restaurant_settings');
@@ -1557,6 +1559,7 @@ class SettingsController extends Controller
         }
 
         // Destrucción de llaves de caché para forzar consulta limpia de base de datos
+        Cache::tenant()->flush();
         Cache::forget('landing_featured_dishes');
         Cache::forget('landing_settings');
         Cache::forget('restaurant_settings');

@@ -10,6 +10,7 @@ use App\Services\AuditLogger;
 use App\Services\ImageCompressionService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
@@ -179,6 +180,7 @@ class DishController extends Controller
         }
 
         $dish->save();
+        Cache::tenant()->flush();
 
         if (!empty($extras)) {
             $dish->extras()->sync($extras);
@@ -252,6 +254,7 @@ class DishController extends Controller
         }
 
         $dish->save();
+        Cache::tenant()->flush();
 
         if ($extras !== null) {
             $dish->extras()->sync($extras);
@@ -277,6 +280,7 @@ class DishController extends Controller
 
         $name = $dish->name;
         $dish->delete();
+        Cache::tenant()->flush();
 
         NotificationService::create(
             'dish_deleted',
@@ -295,6 +299,7 @@ class DishController extends Controller
         $dish = Dish::findOrFail($id);
         $dish->is_available = !$dish->is_available;
         $dish->save();
+        Cache::tenant()->flush();
 
         $statusStr = $dish->is_available ? 'activado' : 'desactivado';
 

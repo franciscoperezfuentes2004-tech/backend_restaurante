@@ -43,66 +43,70 @@ class CategoryController extends Controller
 
     public function publicMenu(Request $request)
     {
-        $categories = Category::where('active', true)
-            ->with(['dishes' => function ($query) {
-                // NO excluir los platillos sin stock o no disponibles; el frontend muestra 'NO DISPONIBLE'
-                $query->with('extras')
-                    ->withCount('reviews')
-                    ->withAvg('reviews', 'rating')
-                    ->orderBy('id', 'asc');
-            }])
-            ->orderBy('id', 'asc')
-            ->get()
-            ->map(function ($cat) {
-                return [
-                    'id'           => $cat->id,
-                    'name'         => $cat->name,
-                    'slug'         => $cat->slug,
-                    'image_url'    => $cat->image_url,
-                    'active'       => (bool) $cat->active,
-                    'time_start'   => $cat->time_start,
-                    'time_end'     => $cat->time_end,
-                    'days'         => $cat->days ?? ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"],
-                    'dishes'       => $cat->dishes->map(function ($dish) {
-                        return [
-                            'id'                  => $dish->id,
-                            'category_id'         => $dish->category_id,
-                            'name'                => $dish->name,
-                            'nombre'              => $dish->name,
-                            'slug'                => $dish->slug,
-                            'description'         => $dish->description,
-                            'descripcion'         => $dish->description,
-                            'price'               => (float) $dish->price,
-                            'precio'              => (float) $dish->price,
-                            'image_url'           => $dish->image_url,
-                            'imagen'              => $dish->image_url,
-                            'allergens'           => $dish->allergens ?? [],
-                            'ingredients'         => $dish->ingredients ?? [],
-                            'allow_extras'        => (bool) $dish->allow_extras,
-                            'allow_observations'  => (bool) $dish->allow_observations,
-                            'allow_spice_level'   => (bool) $dish->allow_spice_level,
-                            'is_available'        => (bool) $dish->is_available,
-                            'disponible'          => (bool) $dish->is_available,
-                            'is_featured'         => (bool) $dish->is_featured,
-                            'reviews_count'       => (int) ($dish->reviews_count ?? 0),
-                            'reviews_avg_rating'  => $dish->reviews_avg_rating !== null ? round((float) $dish->reviews_avg_rating, 1) : null,
-                            'extras'              => $dish->extras->map(fn($e) => [
-                                'id'       => $e->id,
-                                'name'     => $e->name,
-                                'nombre'   => $e->name,
-                                'price'    => (float) $e->price,
-                                'precio'   => (float) $e->price,
-                                'required' => (bool) $e->required,
-                            ])->values()->all(),
-                        ];
-                    })->values()->all(),
-                ];
-            });
+        $payload = Cache::tenant()->remember('public_menu', 3600, function () {
+            $categories = Category::where('active', true)
+                ->with(['dishes' => function ($query) {
+                    // NO excluir los platillos sin stock o no disponibles; el frontend muestra 'NO DISPONIBLE'
+                    $query->with('extras')
+                        ->withCount('reviews')
+                        ->withAvg('reviews', 'rating')
+                        ->orderBy('id', 'asc');
+                }])
+                ->orderBy('id', 'asc')
+                ->get()
+                ->map(function ($cat) {
+                    return [
+                        'id'           => $cat->id,
+                        'name'         => $cat->name,
+                        'slug'         => $cat->slug,
+                        'image_url'    => $cat->image_url,
+                        'active'       => (bool) $cat->active,
+                        'time_start'   => $cat->time_start,
+                        'time_end'     => $cat->time_end,
+                        'days'         => $cat->days ?? ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"],
+                        'dishes'       => $cat->dishes->map(function ($dish) {
+                            return [
+                                'id'                  => $dish->id,
+                                'category_id'         => $dish->category_id,
+                                'name'                => $dish->name,
+                                'nombre'              => $dish->name,
+                                'slug'                => $dish->slug,
+                                'description'         => $dish->description,
+                                'descripcion'         => $dish->description,
+                                'price'               => (float) $dish->price,
+                                'precio'              => (float) $dish->price,
+                                'image_url'           => $dish->image_url,
+                                'imagen'              => $dish->image_url,
+                                'allergens'           => $dish->allergens ?? [],
+                                'ingredients'         => $dish->ingredients ?? [],
+                                'allow_extras'        => (bool) $dish->allow_extras,
+                                'allow_observations'  => (bool) $dish->allow_observations,
+                                'allow_spice_level'   => (bool) $dish->allow_spice_level,
+                                'is_available'        => (bool) $dish->is_available,
+                                'disponible'          => (bool) $dish->is_available,
+                                'is_featured'         => (bool) $dish->is_featured,
+                                'reviews_count'       => (int) ($dish->reviews_count ?? 0),
+                                'reviews_avg_rating'  => $dish->reviews_avg_rating !== null ? round((float) $dish->reviews_avg_rating, 1) : null,
+                                'extras'              => $dish->extras->map(fn($e) => [
+                                    'id'       => $e->id,
+                                    'name'     => $e->name,
+                                    'nombre'   => $e->name,
+                                    'price'    => (float) $e->price,
+                                    'precio'   => (float) $e->price,
+                                    'required' => (bool) $e->required,
+                                ])->values()->all(),
+                            ];
+                        })->values()->all(),
+                    ];
+                });
 
-        return response()->json([
-            'categories' => $categories,
-            'menu'       => $categories,
-        ]);
+            return [
+                'categories' => $categories,
+                'menu'       => $categories,
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     public function indicators()
@@ -223,6 +227,7 @@ class CategoryController extends Controller
         }
 
         $category->save();
+        Cache::tenant()->flush();
 
         NotificationService::create(
             'category_created',
@@ -307,6 +312,7 @@ class CategoryController extends Controller
         }
 
         $category->save();
+        Cache::tenant()->flush();
         $category->loadCount('dishes');
 
         NotificationService::create(
@@ -368,6 +374,7 @@ class CategoryController extends Controller
             ], 422);
         }
 
+        Cache::tenant()->flush();
         Cache::forget('landing_menu');
         Cache::forget('public_menu');
         Cache::forget('landing_settings');
