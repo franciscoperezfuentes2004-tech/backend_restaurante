@@ -202,4 +202,43 @@ class MultiSucursalIsolationTest extends TestCase
         $this->assertEquals($this->sucursalA->id, $dish->sucursal->id);
         $this->assertEquals('SUC-001', $dish->sucursal->codigo);
     }
+
+    public function test_all_operational_models_have_sucursal_scope_registered(): void
+    {
+        $operationalModels = [
+            \App\Models\User::class,
+            \App\Models\Dish::class,
+            \App\Models\Product::class,
+            \App\Models\Category::class,
+            \App\Models\Order::class,
+            \App\Models\OrderItem::class,
+            \App\Models\CashCut::class,
+            \App\Models\Reservation::class,
+            \App\Models\Area::class,
+            \App\Models\Mesa::class,
+            \App\Models\Table::class,
+            \App\Models\Stock::class,
+            \App\Models\StockMovement::class,
+            \App\Models\Ingredient::class,
+            \App\Models\Supplier::class,
+            \App\Models\Review::class,
+            \App\Models\Promotion::class,
+            \App\Models\Notification::class,
+            \App\Models\AuditLog::class,
+            \App\Models\Delivery::class,
+            \App\Models\Payment::class,
+        ];
+
+        foreach ($operationalModels as $modelClass) {
+            $instance = new $modelClass;
+            $this->assertTrue(
+                $modelClass::hasGlobalScope(\App\Models\Scopes\SucursalScope::class),
+                "El modelo {$modelClass} NO tiene registrado el Global Scope 'SucursalScope'."
+            );
+            $this->assertTrue(
+                method_exists($instance, 'sucursal'),
+                "El modelo {$modelClass} NO tiene definida la relación 'sucursal'."
+            );
+        }
+    }
 }

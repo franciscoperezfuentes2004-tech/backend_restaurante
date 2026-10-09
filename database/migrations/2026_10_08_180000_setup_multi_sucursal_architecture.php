@@ -132,9 +132,20 @@ return new class extends Migration
             });
         }
 
-        if (DB::getDriverName() === 'sqlite' && Schema::hasTable('mesas')) {
-            DB::statement('DROP VIEW IF EXISTS tables;');
-            DB::statement('CREATE VIEW tables AS SELECT * FROM mesas;');
+        if (DB::getDriverName() === 'sqlite') {
+            if (Schema::hasTable('mesas')) {
+                DB::statement('DROP VIEW IF EXISTS tables;');
+                DB::statement('CREATE VIEW tables AS SELECT * FROM mesas;');
+            }
+            if (Schema::hasTable('orders')) {
+                DB::statement('DROP INDEX IF EXISTS unique_active_order_per_table;');
+                DB::statement("
+                    CREATE UNIQUE INDEX IF NOT EXISTS unique_active_order_per_table 
+                    ON orders (table_id) 
+                    WHERE table_id IS NOT NULL 
+                      AND status IN ('pending', 'preparing', 'ready', 'open', 'abierto', 'en_preparacion');
+                ");
+            }
         }
     }
 

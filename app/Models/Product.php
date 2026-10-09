@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToSucursal;
+
 class Product extends Dish
 {
+    use BelongsToSucursal;
+
     protected $table = 'dishes';
 
     public function ingredientes()
